@@ -1,0 +1,1 @@
+# Archivo vacío - los modelos se definen en otras apps

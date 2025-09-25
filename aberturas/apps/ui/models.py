@@ -1,0 +1,1 @@
+# Archivo vacío - esta app maneja solo vistas y templates

@@ -1,0 +1,29 @@
+<div class="overflow-x-auto">
+    <table class="table table-zebra w-full">
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Nombre del Producto</th>
+                <th>Acciones</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                <td>{{ item.id }}</td>
+                <td>{{ item.name }}</td>
+                <td>
+                    <button class="btn btn-sm btn-outline btn-primary">Ver</button>
+                    <button class="btn btn-sm btn-outline btn-secondary">Editar</button>
+                </td>
+            </tr>
+            {% empty %}
+            <tr>
+                <td colspan="3" class="text-center text-base-content/70">
+                    No se encontraron productos
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>

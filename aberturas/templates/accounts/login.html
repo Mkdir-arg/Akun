@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="aberturas">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - Sistema de Aberturas</title>
+    
+    {% load static %}
+    <link href="{% static 'build/styles.css' %}" rel="stylesheet">
+</head>
+<body class="bg-base-200">
+    <div class="min-h-screen flex items-center justify-center">
+        <div class="card w-96 bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title justify-center mb-6">Iniciar Sesión</h2>
+                
+                {% if form.errors %}
+                    <div class="alert alert-error mb-4">
+                        <span>Por favor corrige los errores a continuación.</span>
+                    </div>
+                {% endif %}
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="form-control w-full mb-4">
+                        <label class="label" for="{{ form.username.id_for_label }}">
+                            <span class="label-text">Usuario</span>
+                        </label>
+                        <input type="text" 
+                               name="{{ form.username.name }}" 
+                               id="{{ form.username.id_for_label }}"
+                               class="input input-bordered w-full {% if form.username.errors %}input-error{% endif %}"
+                               value="{{ form.username.value|default:'' }}"
+                               required>
+                        {% if form.username.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.username.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-control w-full mb-6">
+                        <label class="label" for="{{ form.password.id_for_label }}">
+                            <span class="label-text">Contraseña</span>
+                        </label>
+                        <input type="password" 
+                               name="{{ form.password.name }}" 
+                               id="{{ form.password.id_for_label }}"
+                               class="input input-bordered w-full {% if form.password.errors %}input-error{% endif %}"
+                               required>
+                        {% if form.password.errors %}
+                            <label class="label">
+                                <span class="label-text-alt text-error">{{ form.password.errors.0 }}</span>
+                            </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-control">
+                        <button type="submit" class="btn btn-primary w-full">
+                            Iniciar Sesión
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

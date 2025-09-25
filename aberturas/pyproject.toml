@@ -1,0 +1,49 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "aberturas"
+version = "0.1.0"
+description = "Sistema de gestión para empresa de aberturas"
+requires-python = ">=3.12"
+dependencies = [
+    "django>=4.2,<4.3",
+    "mysqlclient>=2.2.0",
+    "django-environ>=0.11.0",
+    "django-htmx>=1.17.0",
+    "redis>=5.0.0",
+    "gunicorn>=21.2.0",
+    "whitenoise>=6.6.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=23.0.0",
+    "isort>=5.12.0",
+    "ruff>=0.1.0",
+    "pre-commit>=3.5.0",
+]
+
+[tool.black]
+line-length = 88
+target-version = ['py312']
+include = '\.pyi?$'
+extend-exclude = '''
+/(
+  migrations
+)/
+'''
+
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+line_length = 88
+skip = ["migrations"]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 88
+select = ["E", "F", "W", "I", "N", "UP", "S", "B", "A", "C4", "DJ"]
+ignore = ["E501", "S101", "DJ01"]
+exclude = ["migrations"]
