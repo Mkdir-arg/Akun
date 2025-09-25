@@ -1,42 +1,12 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
-  content: [
-    '../templates/**/*.html',
-    '../apps/**/templates/**/*.html',
-    '../static/**/*.js',
-  ],
+  content: ["./templates/**/*.html", "./apps/**/*.py"],
   theme: {
-    extend: {},
-  },
-  plugins: [
-    require('@tailwindcss/forms'),
-    require('@tailwindcss/typography'),
-    require('daisyui'),
-  ],
-  daisyui: {
-    themes: [
-      {
-        aberturas: {
-          "primary": "#3b82f6",
-          "secondary": "#64748b",
-          "accent": "#f59e0b",
-          "neutral": "#374151",
-          "base-100": "#ffffff",
-          "info": "#06b6d4",
-          "success": "#10b981",
-          "warning": "#f59e0b",
-          "error": "#ef4444",
-        },
+    extend: {
+      fontFamily: {
+        'sans': ['Inter', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
       },
-      "light",
-      "dark",
-    ],
-    darkTheme: "dark",
-    base: true,
-    styled: true,
-    utils: true,
-    prefix: "",
-    logs: true,
-    themeRoot: ":root",
+    },
   },
+  plugins: [],
 }

@@ -1,0 +1,9 @@
+{% if messages %}
+  <div class="mx-auto max-w-2xl px-4 pt-4">
+    {% for message in messages %}
+      <div role="alert" class="alert shadow-md {% if message.tags %}alert-{{ message.tags }}{% else %}alert-info{% endif %}">
+        <span>{{ message }}</span>
+      </div>
+    {% endfor %}
+  </div>
+{% endif %}

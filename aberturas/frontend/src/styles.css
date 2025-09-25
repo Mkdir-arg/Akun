@@ -1,22 +1,3 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
-/* Custom styles */
-@layer components {
-  .btn-primary {
-    @apply btn btn-primary;
-  }
-  
-  .card-custom {
-    @apply card bg-base-100 shadow-xl;
-  }
-  
-  .navbar-custom {
-    @apply navbar bg-base-100 shadow-lg;
-  }
-  
-  .sidebar-custom {
-    @apply drawer-side;
-  }
-}

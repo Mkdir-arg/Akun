@@ -1,11 +1,11 @@
-from django.contrib.auth.views import LoginView, LogoutView
-from django.urls import reverse_lazy
+from django.contrib.auth.views import LoginView
 
-
-class CustomLoginView(LoginView):
-    template_name = 'accounts/login.html'
+class AkunLoginView(LoginView):
+    template_name = "accounts/login.html"
     redirect_authenticated_user = True
 
-
-class CustomLogoutView(LogoutView):
-    next_page = reverse_lazy('accounts:login')
+    def form_valid(self, form):
+        resp = super().form_valid(form)
+        remember = self.request.POST.get("remember_me") in ("on", "true", "1")
+        self.request.session.set_expiry(60*60*24*14 if remember else 0)
+        return resp
