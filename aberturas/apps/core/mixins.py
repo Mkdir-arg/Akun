@@ -2,7 +2,6 @@
 Mixins reutilizables para vistas y modelos.
 """
 
-from django.contrib.auth.mixins import LoginRequiredMixin
 from django.db import models
 from django.utils import timezone
 
@@ -16,6 +15,5 @@ class TimestampMixin(models.Model):
         abstract = True
 
 
-class AuthRequiredMixin(LoginRequiredMixin):
-    """Mixin para vistas que requieren autenticación."""
-    pass
+# AuthRequiredMixin se define en las vistas donde se necesite
+# para evitar problemas de importación circular

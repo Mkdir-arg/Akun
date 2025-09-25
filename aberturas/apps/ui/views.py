@@ -1,13 +1,12 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
-from apps.core.mixins import AuthRequiredMixin
 
 
-@method_decorator(login_required, name='dispatch')
-class DashboardView(TemplateView):
+class DashboardView(LoginRequiredMixin, TemplateView):
     template_name = 'ui/dashboard.html'
     
     def get_context_data(self, **kwargs):

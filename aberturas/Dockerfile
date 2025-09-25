@@ -28,12 +28,18 @@ USER app
 # Copy project
 COPY --chown=app:app . .
 
+# Make entrypoint executable
+RUN chmod +x entrypoint.sh
+
 # Health check
 HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
     CMD python manage.py check || exit 1
 
 # Expose port
 EXPOSE 8000
+
+# Set entrypoint
+ENTRYPOINT ["./entrypoint.sh"]
 
 # Run the application
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
