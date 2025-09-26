@@ -7,6 +7,7 @@ import CustomerDetail from './components/customers/CustomerDetail';
 import CustomerEdit from './components/customers/CustomerEdit';
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
+import SettingsLayout from './components/settings/SettingsLayout';
 import Layout from './components/Layout';
 import './index.css';
 
@@ -99,6 +100,9 @@ function App() {
           onEdit={() => window.location.hash = `/clientes/${customerId}/editar`}
         />
       );
+    }
+    if (currentPath === '/configuracion') {
+      return <SettingsLayout />;
     }
     return <Home />;
   };

@@ -1,6 +1,11 @@
-from django.urls import path
+from django.urls import path, include
 from django.contrib.auth.views import LogoutView
-from .views import AkunLoginView, APILoginView, APILogoutView, APIDashboardView, APITestView
+from rest_framework.routers import DefaultRouter
+from .views import AkunLoginView, APILoginView, APILogoutView, APIDashboardView, APITestView, RoleViewSet, UserViewSet, user_profile
+
+router = DefaultRouter()
+router.register(r'roles', RoleViewSet)
+router.register(r'users', UserViewSet)
 
 urlpatterns = [
     path("login/", AkunLoginView.as_view(), name="login"),
@@ -11,4 +16,6 @@ urlpatterns = [
     path("api/login/", APILoginView.as_view(), name="api_login"),
     path("api/logout/", APILogoutView.as_view(), name="api_logout"),
     path("api/dashboard/", APIDashboardView.as_view(), name="api_dashboard"),
+    path("api/profile/", user_profile, name="api_profile"),
+    path('api/', include(router.urls)),
 ]

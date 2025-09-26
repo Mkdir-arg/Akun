@@ -10,7 +10,11 @@ from django.utils.decorators import method_decorator
 from django.views import View
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import status
+from rest_framework import status, viewsets, filters
+from rest_framework.decorators import action, api_view
+from rest_framework.permissions import IsAuthenticated
+from .models import Role
+from .serializers import RoleSerializer, UserSerializer, UserProfileSerializer
 import json
 
 User = get_user_model()
@@ -102,3 +106,89 @@ class APITestView(View):
     
     def post(self, request):
         return JsonResponse({'message': 'POST funcionando', 'data': 'recibido'})
+
+
+class RoleViewSet(viewsets.ModelViewSet):
+    queryset = Role.objects.all()
+    serializer_class = RoleSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'description']
+    ordering_fields = ['name', 'created_at']
+    ordering = ['name']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        role = self.get_object()
+        role.is_active = True
+        role.save()
+        return Response({'status': 'Rol activado'})
+    
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        role = self.get_object()
+        role.is_active = False
+        role.save()
+        return Response({'status': 'Rol desactivado'})
+
+
+class UserViewSet(viewsets.ModelViewSet):
+    queryset = User.objects.select_related('role')
+    serializer_class = UserSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['username', 'email', 'first_name', 'last_name']
+    ordering_fields = ['username', 'email', 'first_name', 'last_name', 'created_at']
+    ordering = ['first_name', 'last_name']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        is_active = self.request.query_params.get('is_active')
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
+            
+        role = self.request.query_params.get('role')
+        if role:
+            queryset = queryset.filter(role=role)
+            
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = True
+        user.save()
+        return Response({'status': 'Usuario activado'})
+    
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        user = self.get_object()
+        user.is_active = False
+        user.save()
+        return Response({'status': 'Usuario desactivado'})
+    
+    @action(detail=True, methods=['post'])
+    def reset_password(self, request, pk=None):
+        user = self.get_object()
+        new_password = request.data.get('password')
+        if new_password:
+            user.set_password(new_password)
+            user.save()
+            return Response({'status': 'Contraseña actualizada'})
+        return Response({'error': 'Contraseña requerida'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['GET'])
+def user_profile(request):
+    if request.user.is_authenticated:
+        serializer = UserProfileSerializer(request.user)
+        return Response(serializer.data)
+    return Response({'error': 'No autenticado'}, status=status.HTTP_401_UNAUTHORIZED)
