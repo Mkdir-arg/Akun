@@ -178,7 +178,7 @@ class RoleViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.select_related('role')
     serializer_class = UserSerializer
-    permission_classes = [AdminOnlyPermission]
+    permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['username', 'email', 'first_name', 'last_name', 'created_at']

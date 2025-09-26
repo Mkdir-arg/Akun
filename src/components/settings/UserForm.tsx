@@ -51,6 +51,7 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave }) => {
     setLoading(true);
 
     try {
+      console.log('Enviando datos:', formData);
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/users/`, {
         method: 'POST',
         headers: {
@@ -63,7 +64,12 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave }) => {
         })
       });
 
+      console.log('Response status:', response.status);
+      const data = await response.json();
+      console.log('Response data:', data);
+
       if (response.ok) {
+        alert('Usuario creado exitosamente');
         onSave();
         onClose();
         setFormData({
@@ -76,9 +82,12 @@ const UserForm: React.FC<UserFormProps> = ({ isOpen, onClose, onSave }) => {
           is_active: true,
           is_staff: false
         });
+      } else {
+        alert('Error: ' + JSON.stringify(data));
       }
     } catch (error) {
       console.error('Error creating user:', error);
+      alert('Error de conexión');
     } finally {
       setLoading(false);
     }
