@@ -1,86 +1,141 @@
-from django.shortcuts import render
-from django.views.generic import ListView, CreateView, UpdateView, DetailView
-from django.contrib.auth.mixins import LoginRequiredMixin
-from django.urls import reverse_lazy
-from django.contrib import messages
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
-from .models import Customer, Address
-from .forms import CustomerForm, AddressForm
+from django.db import transaction
+from .models import Customer, Address, Contact, PaymentTerm, CustomerTag, CustomerNote, CustomerFile
+from .serializers import (
+    CustomerSerializer, CustomerDetailSerializer, AddressSerializer,
+    ContactSerializer, PaymentTermSerializer, CustomerTagSerializer,
+    CustomerNoteSerializer, CustomerFileSerializer
+)
 
 
-class CustomerListView(LoginRequiredMixin, ListView):
-    model = Customer
-    template_name = 'crm/customer_list.html'
-    context_object_name = 'customers'
-    paginate_by = 20
+class CustomerViewSet(viewsets.ModelViewSet):
+    queryset = Customer.objects.select_related('default_price_list', 'payment_terms').prefetch_related('tags')
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'code', 'tax_id', 'email', 'phone']
+    ordering_fields = ['name', 'created_at', 'updated_at']
+    ordering = ['name']
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return CustomerDetailSerializer
+        return CustomerSerializer
+    
+    @action(detail=True, methods=['post'])
+    def activate(self, request, pk=None):
+        customer = self.get_object()
+        customer.status = 'ACTIVO'
+        customer.is_active = True
+        customer.save()
+        return Response({'status': 'Cliente activado'})
+    
+    @action(detail=True, methods=['post'])
+    def deactivate(self, request, pk=None):
+        customer = self.get_object()
+        customer.status = 'INACTIVO'
+        customer.is_active = False
+        customer.save()
+        return Response({'status': 'Cliente desactivado'})
+    
+    @action(detail=True, methods=['post'])
+    def set_default_address(self, request, pk=None):
+        customer = self.get_object()
+        kind = request.data.get('kind')
+        address_id = request.data.get('address_id')
+        
+        try:
+            with transaction.atomic():
+                # Desmarcar direcciones default del mismo tipo
+                Address.objects.filter(customer=customer, kind=kind).update(is_default=False)
+                # Marcar nueva dirección como default
+                address = Address.objects.get(id=address_id, customer=customer)
+                address.is_default = True
+                address.save()
+                
+            return Response({'status': 'Dirección por defecto actualizada'})
+        except Address.DoesNotExist:
+            return Response({'error': 'Dirección no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+    
+    @action(detail=True, methods=['post'])
+    def set_primary_contact(self, request, pk=None):
+        customer = self.get_object()
+        contact_id = request.data.get('contact_id')
+        
+        try:
+            with transaction.atomic():
+                # Desmarcar contactos primarios
+                Contact.objects.filter(customer=customer).update(is_primary=False)
+                # Marcar nuevo contacto como primario
+                contact = Contact.objects.get(id=contact_id, customer=customer)
+                contact.is_primary = True
+                contact.save()
+                
+            return Response({'status': 'Contacto principal actualizado'})
+        except Contact.DoesNotExist:
+            return Response({'error': 'Contacto no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+
+class AddressViewSet(viewsets.ModelViewSet):
+    serializer_class = AddressSerializer
+    permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        queryset = Customer.objects.select_related('default_price_list')
-        
-        # Búsqueda
-        q = self.request.GET.get('q')
-        if q:
-            queryset = queryset.filter(
-                Q(name__icontains=q) | Q(tax_id__icontains=q) | Q(code__icontains=q)
-            )
-        
-        # Filtros
-        is_active = self.request.GET.get('is_active')
-        if is_active:
-            queryset = queryset.filter(is_active=is_active == 'true')
-            
-        customer_type = self.request.GET.get('type')
-        if customer_type:
-            queryset = queryset.filter(type=customer_type)
-        
-        # Ordenamiento
-        order_by = self.request.GET.get('order_by', 'code')
-        direction = self.request.GET.get('direction', 'asc')
-        if direction == 'desc':
-            order_by = f'-{order_by}'
-        queryset = queryset.order_by(order_by)
-        
-        return queryset
+        return Address.objects.select_related('customer')
+
+
+class ContactViewSet(viewsets.ModelViewSet):
+    serializer_class = ContactSerializer
+    permission_classes = [IsAuthenticated]
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['customer_types'] = Customer.TYPE_CHOICES
-        return context
+    def get_queryset(self):
+        return Contact.objects.select_related('customer')
+
+
+class PaymentTermViewSet(viewsets.ModelViewSet):
+    queryset = PaymentTerm.objects.filter(is_active=True)
+    serializer_class = PaymentTermSerializer
+    permission_classes = [IsAuthenticated]
+    ordering = ['days']
+
+
+class CustomerTagViewSet(viewsets.ModelViewSet):
+    queryset = CustomerTag.objects.filter(is_active=True)
+    serializer_class = CustomerTagSerializer
+    permission_classes = [IsAuthenticated]
+    ordering = ['name']
+
+
+class CustomerNoteViewSet(viewsets.ModelViewSet):
+    serializer_class = CustomerNoteSerializer
+    permission_classes = [IsAuthenticated]
+    ordering = ['-pinned', '-created_at']
     
-    def render_to_response(self, context, **response_kwargs):
-        if self.request.htmx:
-            return render(self.request, 'crm/partials/customer_table.html', context)
-        return super().render_to_response(context, **response_kwargs)
-
-
-class CustomerCreateView(LoginRequiredMixin, CreateView):
-    model = Customer
-    form_class = CustomerForm
-    template_name = 'crm/customer_form.html'
-    success_url = reverse_lazy('crm:customer_list')
+    def get_queryset(self):
+        return CustomerNote.objects.select_related('customer', 'author')
     
-    def form_valid(self, form):
-        messages.success(self.request, 'Cliente creado exitosamente.')
-        return super().form_valid(form)
+    def perform_create(self, serializer):
+        serializer.save(author=self.request.user)
 
 
-class CustomerUpdateView(LoginRequiredMixin, UpdateView):
-    model = Customer
-    form_class = CustomerForm
-    template_name = 'crm/customer_form.html'
-    success_url = reverse_lazy('crm:customer_list')
+class CustomerFileViewSet(viewsets.ModelViewSet):
+    serializer_class = CustomerFileSerializer
+    permission_classes = [IsAuthenticated]
+    ordering = ['-uploaded_at']
     
-    def form_valid(self, form):
-        messages.success(self.request, 'Cliente actualizado exitosamente.')
-        return super().form_valid(form)
-
-
-class CustomerDetailView(LoginRequiredMixin, DetailView):
-    model = Customer
-    template_name = 'crm/customer_detail.html'
-    context_object_name = 'customer'
+    def get_queryset(self):
+        return CustomerFile.objects.select_related('customer', 'uploaded_by')
     
-    def get_context_data(self, **kwargs):
-        context = super().get_context_data(**kwargs)
-        context['addresses'] = self.object.addresses.all()
-        return context
+    def perform_create(self, serializer):
+        serializer.save(uploaded_by=self.request.user)
+    
+    @action(detail=True, methods=['get'])
+    def download(self, request, pk=None):
+        file_obj = self.get_object()
+        response = Response()
+        response['Content-Disposition'] = f'attachment; filename="{file_obj.file.name}"'
+        response['X-Accel-Redirect'] = file_obj.file.url
+        return response

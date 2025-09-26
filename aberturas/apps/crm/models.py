@@ -1,5 +1,6 @@
 from django.db import models, transaction
 from django.core.exceptions import ValidationError
+from django.conf import settings
 from decimal import Decimal
 
 
@@ -9,37 +10,67 @@ class Customer(models.Model):
         ('EMPRESA', 'Empresa'),
     ]
     
-    code = models.CharField(max_length=20, unique=True, blank=True)
-    type = models.CharField(max_length=10, choices=TYPE_CHOICES)
-    name = models.CharField(max_length=200, db_index=True)
-    tax_id = models.CharField(max_length=20, blank=True)
-    email = models.EmailField(blank=True)
-    phone = models.CharField(max_length=20, blank=True)
+    STATUS_CHOICES = [
+        ('ACTIVO', 'Activo'),
+        ('INACTIVO', 'Inactivo'),
+        ('POTENCIAL', 'Potencial'),
+    ]
+    
+    code = models.CharField(max_length=16, unique=True, blank=True)
+    type = models.CharField(max_length=10, choices=TYPE_CHOICES, default='EMPRESA')
+    name = models.CharField(max_length=255, db_index=True)
+    tax_id = models.CharField(max_length=20, null=True, blank=True, unique=True)
+    email = models.EmailField(null=True, blank=True)
+    phone = models.CharField(max_length=40, null=True, blank=True)
     default_price_list = models.ForeignKey(
         'catalog.PriceList', 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True
     )
+    payment_terms = models.ForeignKey(
+        'PaymentTerm',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True
+    )
     credit_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ACTIVO')
+    tags = models.ManyToManyField('CustomerTag', blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True, null=True)
+    updated_at = models.DateTimeField(auto_now=True, null=True)
     
     class Meta:
         verbose_name = 'Cliente'
         verbose_name_plural = 'Clientes'
         indexes = [
-            models.Index(fields=['name']),
+            models.Index(fields=['name'], name='crm_customer_name_idx'),
+            models.Index(fields=['status'], name='crm_customer_status_idx'),
         ]
         constraints = [
             models.UniqueConstraint(
                 fields=['tax_id'],
-                condition=~models.Q(tax_id=''),
-                name='unique_tax_id_when_not_empty'
+                condition=~models.Q(tax_id=None),
+                name='uniq_customer_tax_id'
             )
         ]
         
+    def clean(self):
+        # Normalizar tax_id
+        if self.tax_id:
+            self.tax_id = self.tax_id.strip().upper()
+        if self.tax_id == '':
+            self.tax_id = None
+            
+        # Validar nombre para personas
+        if self.type == 'PERSONA' and len(self.name.strip()) < 3:
+            raise ValidationError('El nombre de una persona debe tener al menos 3 caracteres.')
+    
     def save(self, *args, **kwargs):
+        self.full_clean()
+        
         if not self.code:
             with transaction.atomic():
                 # Generar código correlativo
@@ -53,6 +84,13 @@ class Customer(models.Model):
                 else:
                     new_number = 1
                 self.code = f"C{new_number:05d}"
+                
+        # Sincronizar status con is_active
+        if self.status == 'INACTIVO':
+            self.is_active = False
+        elif self.status == 'ACTIVO':
+            self.is_active = True
+            
         super().save(*args, **kwargs)
         
     def __str__(self):
@@ -82,7 +120,7 @@ class Address(models.Model):
             models.UniqueConstraint(
                 fields=['customer', 'kind'],
                 condition=models.Q(is_default=True),
-                name='unique_default_address_per_customer_kind'
+                name='uniq_default_address_per_kind'
             )
         ]
         
@@ -106,3 +144,108 @@ class Address(models.Model):
         
     def __str__(self):
         return f"{self.street} {self.number}, {self.city} ({self.get_kind_display()})"
+
+
+class Contact(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='contacts')
+    first_name = models.CharField(max_length=100)
+    last_name = models.CharField(max_length=100)
+    email = models.EmailField(blank=True)
+    phone = models.CharField(max_length=40, blank=True)
+    role = models.CharField(max_length=80, blank=True)
+    is_primary = models.BooleanField(default=False)
+    
+    class Meta:
+        verbose_name = 'Contacto'
+        verbose_name_plural = 'Contactos'
+        constraints = [
+            models.UniqueConstraint(
+                fields=['customer'],
+                condition=models.Q(is_primary=True),
+                name='uniq_primary_contact_per_customer'
+            )
+        ]
+    
+    @property
+    def full_name(self):
+        return f"{self.first_name} {self.last_name}".strip()
+    
+    def clean(self):
+        if self.is_primary:
+            existing = Contact.objects.filter(
+                customer=self.customer,
+                is_primary=True
+            ).exclude(pk=self.pk)
+            
+            if existing.exists():
+                raise ValidationError('Ya existe un contacto principal para este cliente.')
+    
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+    
+    def __str__(self):
+        return f"{self.full_name} ({self.customer.name})"
+
+
+class PaymentTerm(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    days = models.PositiveSmallIntegerField()
+    early_discount_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
+    notes = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Término de Pago'
+        verbose_name_plural = 'Términos de Pago'
+        ordering = ['days']
+    
+    def __str__(self):
+        return self.name
+
+
+class CustomerTag(models.Model):
+    name = models.CharField(max_length=50, unique=True)
+    color = models.CharField(max_length=7, blank=True, help_text='Color hex (ej: #FF5733)')
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Etiqueta de Cliente'
+        verbose_name_plural = 'Etiquetas de Cliente'
+        ordering = ['name']
+    
+    def __str__(self):
+        return self.name
+
+
+class CustomerNote(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_notes')
+    author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    body = models.TextField()
+    pinned = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Nota de Cliente'
+        verbose_name_plural = 'Notas de Cliente'
+        ordering = ['-pinned', '-created_at']
+    
+    def __str__(self):
+        return f"Nota de {self.customer.name} - {self.created_at.strftime('%d/%m/%Y')}"
+
+
+class CustomerFile(models.Model):
+    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='files')
+    file = models.FileField(upload_to='customers/files/%Y/%m/')
+    title = models.CharField(max_length=255, blank=True)
+    uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Archivo de Cliente'
+        verbose_name_plural = 'Archivos de Cliente'
+        ordering = ['-uploaded_at']
+    
+    def __str__(self):
+        return f"{self.title or self.file.name} - {self.customer.name}"
