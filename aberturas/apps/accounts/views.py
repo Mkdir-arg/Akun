@@ -13,6 +13,7 @@ from rest_framework.response import Response
 from rest_framework import status, viewsets, filters
 from rest_framework.decorators import action, api_view
 from rest_framework.permissions import IsAuthenticated
+from apps.core.permissions import RoleBasedPermission, AdminOnlyPermission
 from .models import Role
 from .serializers import RoleSerializer, UserSerializer, UserProfileSerializer
 import json
@@ -57,25 +58,60 @@ class AkunLoginView(LoginView):
 @method_decorator(csrf_exempt, name='dispatch')
 class APILoginView(View):
     def post(self, request):
-        data = json.loads(request.body)
-        email = data.get('email')
-        password = data.get('password')
+        print(f"DEBUG: Request body: {request.body}")
+        print(f"DEBUG: Content type: {request.content_type}")
         
-        user = User.objects.get(email=email)
-        user_auth = authenticate(request, username=user.username, password=password)
-        
-        if user_auth:
-            login(request, user_auth)
-            return JsonResponse({
-                'user': {
-                    'id': user.id,
-                    'email': user.email,
-                    'first_name': user.first_name,
-                    'last_name': user.last_name
+        try:
+            if request.content_type == 'application/json':
+                data = json.loads(request.body)
+            else:
+                data = {
+                    'email': request.POST.get('email'),
+                    'password': request.POST.get('password')
                 }
-            })
-        
-        return JsonResponse({'email': ['Credenciales inválidas']}, status=400)
+            
+            email = data.get('email')
+            password = data.get('password')
+            
+            print(f"DEBUG: Email: {email}, Password: {'*' * len(password) if password else None}")
+            
+            if not email or not password:
+                return JsonResponse({'error': 'Email y contraseña requeridos'}, status=400)
+            
+            # Buscar usuario por email
+            try:
+                user = User.objects.get(email=email)
+                print(f"DEBUG: Usuario encontrado: {user.username}, activo: {user.is_active}")
+            except User.DoesNotExist:
+                print("DEBUG: Usuario no encontrado")
+                return JsonResponse({'error': 'Credenciales inválidas'}, status=400)
+            
+            # Autenticar
+            user_auth = authenticate(request, username=user.username, password=password)
+            print(f"DEBUG: Resultado autenticación: {user_auth}")
+            
+            if user_auth and user_auth.is_active:
+                login(request, user_auth)
+                print("DEBUG: Login exitoso")
+                return JsonResponse({
+                    'success': True,
+                    'user': {
+                        'id': user_auth.id,
+                        'email': user_auth.email,
+                        'first_name': user_auth.first_name,
+                        'last_name': user_auth.last_name
+                    }
+                })
+            else:
+                print("DEBUG: Autenticación falló")
+                return JsonResponse({'error': 'Credenciales inválidas'}, status=400)
+                
+        except json.JSONDecodeError:
+            print("DEBUG: Error decodificando JSON")
+            return JsonResponse({'error': 'JSON inválido'}, status=400)
+        except Exception as e:
+            print(f"DEBUG: Error inesperado: {str(e)}")
+            return JsonResponse({'error': f'Error del servidor: {str(e)}'}, status=500)
 
 
 class APILogoutView(APIView):
@@ -111,7 +147,7 @@ class APITestView(View):
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AdminOnlyPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
@@ -142,7 +178,7 @@ class RoleViewSet(viewsets.ModelViewSet):
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.select_related('role')
     serializer_class = UserSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AdminOnlyPermission]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['username', 'email', 'first_name', 'last_name']
     ordering_fields = ['username', 'email', 'first_name', 'last_name', 'created_at']

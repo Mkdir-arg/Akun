@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, UserCheck, UserX, Key } from 'lucide-react';
+import UserForm from './UserForm';
 
 interface User {
   id: number;
@@ -18,6 +19,7 @@ const UserList: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [showUserForm, setShowUserForm] = useState(false);
 
   useEffect(() => {
     fetchUsers();
@@ -115,7 +117,10 @@ const UserList: React.FC = () => {
           />
         </div>
         
-        <button className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700">
+        <button 
+          onClick={() => setShowUserForm(true)}
+          className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+        >
           <Plus className="w-4 h-4 mr-2" />
           Nuevo Usuario
         </button>
@@ -196,6 +201,15 @@ const UserList: React.FC = () => {
           <p className="text-gray-500">No se encontraron usuarios</p>
         </div>
       )}
+      
+      <UserForm 
+        isOpen={showUserForm}
+        onClose={() => setShowUserForm(false)}
+        onSave={() => {
+          fetchUsers();
+          setShowUserForm(false);
+        }}
+      />
     </div>
   );
 };

@@ -18,7 +18,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
     setError('');
     
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/auth/`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/simple-login/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -32,7 +32,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
       if (response.ok) {
         onLoginSuccess(data.user);
       } else {
-        setError(data.email?.[0] || data.password?.[0] || 'Credenciales inválidas');
+        setError(data.error || 'Credenciales inválidas');
       }
     } catch (error) {
       setError('Error de conexión. Verifica que el servidor esté ejecutándose.');
@@ -100,9 +100,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" />
                 <span className="ml-2 text-gray-600">Recordarme</span>
               </label>
-              <a href="#" className="text-blue-600 hover:text-blue-700 font-medium">
+              <button className="text-blue-600 hover:text-blue-700 font-medium">
                 ¿Olvidaste tu contraseña?
-              </a>
+              </button>
             </div>
 
             {/* Submit Button */}
@@ -127,9 +127,9 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
           {/* Sign Up Link */}
           <p className="text-center text-gray-600 mt-8">
             ¿No tienes cuenta?{' '}
-            <a href="#" className="text-blue-600 hover:text-blue-700 font-semibold">
+            <button className="text-blue-600 hover:text-blue-700 font-semibold">
               Regístrate aquí
-            </a>
+            </button>
           </p>
         </div>
       </div>
