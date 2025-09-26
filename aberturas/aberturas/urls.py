@@ -12,6 +12,7 @@ urlpatterns = [
     path('', include('apps.ui.urls')),
     path('', include('apps.accounts.urls')),
     path('', include('apps.crm.urls')),
+    path('', include('apps.catalog.urls')),
     path('catalog/', include('apps.catalog.urls')),
 ]
 

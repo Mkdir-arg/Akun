@@ -5,6 +5,8 @@ import CustomerList from './components/customers/CustomerList';
 import CustomerForm from './components/customers/CustomerForm';
 import CustomerDetail from './components/customers/CustomerDetail';
 import CustomerEdit from './components/customers/CustomerEdit';
+import ProductList from './components/products/ProductList';
+import ProductForm from './components/products/ProductForm';
 import Layout from './components/Layout';
 import './index.css';
 
@@ -48,6 +50,27 @@ function App() {
   const renderCurrentPage = () => {
     if (currentPath === '/clientes') {
       return <CustomerList />;
+    }
+    if (currentPath === '/productos') {
+      return <ProductList />;
+    }
+    if (currentPath === '/productos/nuevo') {
+      return (
+        <ProductForm 
+          onBack={() => window.location.hash = '/productos'}
+          onSave={() => window.location.hash = '/productos'}
+        />
+      );
+    }
+    if (currentPath.startsWith('/productos/') && currentPath.endsWith('/editar')) {
+      const productId = currentPath.split('/')[2];
+      return (
+        <ProductForm 
+          productId={productId}
+          onBack={() => window.location.hash = `/productos/${productId}`}
+          onSave={() => window.location.hash = `/productos/${productId}`}
+        />
+      );
     }
     if (currentPath === '/clientes/nuevo') {
       return (
