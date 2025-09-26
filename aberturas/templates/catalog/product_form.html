@@ -1,0 +1,188 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar Producto{% else %}Nuevo Producto{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            {% if object %}Editar Producto{% else %}Nuevo Producto{% endif %}
+        </h1>
+        <a href="{% url 'catalog:product_list' %}" class="btn btn-outline">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver
+        </a>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Información Básica -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">Información Básica</h3>
+                        
+                        <div>
+                            <label class="label">
+                                <span class="label-text">SKU *</span>
+                            </label>
+                            {{ form.sku }}
+                            {% if form.sku.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.sku.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Nombre *</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Categoría *</span>
+                            </label>
+                            {{ form.category }}
+                            {% if form.category.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.category.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Unidad de Medida</span>
+                            </label>
+                            {{ form.uom }}
+                        </div>
+
+                        <div class="flex gap-4">
+                            <label class="label cursor-pointer">
+                                {{ form.is_service }}
+                                <span class="label-text ml-2">Es servicio</span>
+                            </label>
+                            <label class="label cursor-pointer">
+                                {{ form.is_active }}
+                                <span class="label-text ml-2">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Especificaciones -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">Especificaciones</h3>
+                        
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Material *</span>
+                            </label>
+                            {{ form.material }}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Tipo de Apertura *</span>
+                            </label>
+                            {{ form.opening_type }}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Tipo de Vidrio</span>
+                            </label>
+                            {{ form.glass_type }}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Código de Color</span>
+                            </label>
+                            {{ form.color_code }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Dimensiones y Peso -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-4">Dimensiones y Peso</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Ancho (mm)</span>
+                            </label>
+                            {{ form.width_mm }}
+                        </div>
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Alto (mm)</span>
+                            </label>
+                            {{ form.height_mm }}
+                        </div>
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Peso (kg)</span>
+                            </label>
+                            {{ form.weight_kg }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Precios e Impuestos -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-4">Precios e Impuestos</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="space-y-4">
+                            <div>
+                                <label class="label">
+                                    <span class="label-text">Impuesto</span>
+                                </label>
+                                {{ form.tax }}
+                            </div>
+                            <div>
+                                <label class="label">
+                                    <span class="label-text">Método de Precio</span>
+                                </label>
+                                {{ form.pricing_method }}
+                            </div>
+                        </div>
+                        <div class="space-y-4">
+                            <div>
+                                <label class="label">
+                                    <span class="label-text">Precio Base</span>
+                                </label>
+                                {{ form.base_price }}
+                            </div>
+                            <div>
+                                <label class="label">
+                                    <span class="label-text">Precio por m²</span>
+                                </label>
+                                {{ form.price_per_m2 }}
+                            </div>
+                            <div>
+                                <label class="label">
+                                    <span class="label-text">Área Mínima (m²)</span>
+                                </label>
+                                {{ form.min_area_m2 }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end mt-6">
+                    <button type="submit" class="btn btn-primary">
+                        {% if object %}Actualizar{% else %}Crear{% endif %} Producto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

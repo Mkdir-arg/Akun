@@ -1,0 +1,142 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar Cliente{% else %}Nuevo Cliente{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            {% if object %}Editar Cliente{% else %}Nuevo Cliente{% endif %}
+        </h1>
+        <a href="{% url 'crm:customer_list' %}" class="btn btn-outline">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver
+        </a>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Información Básica -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">Información Básica</h3>
+                        
+                        {% if object %}
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Código</span>
+                            </label>
+                            <input type="text" value="{{ object.code }}" class="input input-bordered w-full" readonly>
+                        </div>
+                        {% endif %}
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Tipo *</span>
+                            </label>
+                            {{ form.type }}
+                            {% if form.type.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.type.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Nombre *</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">CUIT/CUIL</span>
+                            </label>
+                            {{ form.tax_id }}
+                            {% if form.tax_id.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.tax_id.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="flex gap-4">
+                            <label class="label cursor-pointer">
+                                {{ form.is_active }}
+                                <span class="label-text ml-2">Activo</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Contacto -->
+                    <div class="space-y-4">
+                        <h3 class="text-lg font-semibold">Contacto</h3>
+                        
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Email</span>
+                            </label>
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.email.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Teléfono</span>
+                            </label>
+                            {{ form.phone }}
+                            {% if form.phone.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.phone.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Comercial -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-4">Información Comercial</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Lista de Precios por Defecto</span>
+                            </label>
+                            {{ form.default_price_list }}
+                        </div>
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Límite de Crédito</span>
+                            </label>
+                            {{ form.credit_limit }}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Notas -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold mb-4">Notas</h3>
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Observaciones</span>
+                        </label>
+                        {{ form.notes }}
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end mt-6">
+                    <button type="submit" class="btn btn-primary">
+                        {% if object %}Actualizar{% else %}Crear{% endif %} Cliente
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

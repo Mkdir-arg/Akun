@@ -34,23 +34,29 @@ DJANGO_APPS = [
 
 THIRD_PARTY_APPS = [
     'django_htmx',
+    'rest_framework',
+    'corsheaders',
 ]
 
 LOCAL_APPS = [
     'apps.core',
     'apps.accounts',
     'apps.ui',
+    'apps.crm',
+    'apps.catalog',
 ]
 
 INSTALLED_APPS = DJANGO_APPS + THIRD_PARTY_APPS + LOCAL_APPS
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
+    'apps.core.middleware.TransactionLoggerMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
@@ -155,9 +161,10 @@ LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
     'formatters': {
-        'verbose': {
-            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+        'transaction': {
+            'format': '⏰ {asctime} | {message}',
             'style': '{',
+            'datefmt': '%H:%M:%S',
         },
         'simple': {
             'format': '{levelname} {message}',
@@ -169,9 +176,42 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
+        'transaction_console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'transaction',
+            'level': 'INFO',
+        },
+    },
+    'loggers': {
+        'transactions': {
+            'handlers': ['transaction_console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
     },
     'root': {
         'handlers': ['console'],
         'level': 'INFO',
     },
 }
+
+# REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.AllowAny',  # Cambiado para desarrollo
+    ],
+}
+
+# CORS settings
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
+    "http://localhost:3001",
+    "http://127.0.0.1:3001",
+    "http://frontend:3000",
+]
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = True  # Solo para desarrollo

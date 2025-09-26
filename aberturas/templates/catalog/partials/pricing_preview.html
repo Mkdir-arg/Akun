@@ -1,0 +1,45 @@
+{% if error %}
+    <div class="alert alert-error">
+        <svg class="stroke-current shrink-0 w-6 h-6" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        <span>{{ error }}</span>
+    </div>
+{% else %}
+    <div class="card bg-base-100 shadow-lg">
+        <div class="card-body">
+            <h3 class="card-title text-lg">Preview de Precio</h3>
+            
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <span class="font-medium">Producto:</span>
+                    <span>{{ product.name }}</span>
+                </div>
+                
+                <div class="flex justify-between">
+                    <span class="font-medium">Lista:</span>
+                    <span>{{ price_list.name }}</span>
+                </div>
+                
+                {% if width_mm and height_mm %}
+                <div class="flex justify-between">
+                    <span class="font-medium">Dimensiones:</span>
+                    <span>{{ width_mm }}mm x {{ height_mm }}mm</span>
+                </div>
+                
+                <div class="flex justify-between">
+                    <span class="font-medium">Área:</span>
+                    <span>{{ width_mm|floatformat:0|mul:height_mm|floatformat:0|div:1000000|floatformat:2 }} m²</span>
+                </div>
+                {% endif %}
+                
+                <div class="divider"></div>
+                
+                <div class="flex justify-between text-xl font-bold">
+                    <span>Precio Unitario:</span>
+                    <span class="text-primary">${{ unit_price|floatformat:2 }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}

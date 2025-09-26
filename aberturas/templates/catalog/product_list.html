@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Productos{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">Productos</h1>
+        <a href="{% url 'catalog:product_create' %}" class="btn btn-primary">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path>
+            </svg>
+            Nuevo Producto
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <form hx-get="{% url 'catalog:product_list' %}" hx-target="#product-table" hx-trigger="input delay:300ms, change">
+                <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Buscar</span>
+                        </label>
+                        <input type="text" name="q" value="{{ request.GET.q }}" 
+                               placeholder="SKU o nombre..." class="input input-bordered w-full">
+                    </div>
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Categoría</span>
+                        </label>
+                        <select name="category" class="select select-bordered w-full">
+                            <option value="">Todas</option>
+                            {% for category in categories %}
+                                <option value="{{ category.id }}" {% if request.GET.category == category.id|stringformat:"s" %}selected{% endif %}>
+                                    {{ category.name }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Material</span>
+                        </label>
+                        <select name="material" class="select select-bordered w-full">
+                            <option value="">Todos</option>
+                            {% for value, label in materials %}
+                                <option value="{{ value }}" {% if request.GET.material == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Tipo Apertura</span>
+                        </label>
+                        <select name="opening_type" class="select select-bordered w-full">
+                            <option value="">Todos</option>
+                            {% for value, label in opening_types %}
+                                <option value="{{ value }}" {% if request.GET.opening_type == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Método Precio</span>
+                        </label>
+                        <select name="pricing_method" class="select select-bordered w-full">
+                            <option value="">Todos</option>
+                            {% for value, label in pricing_methods %}
+                                <option value="{{ value }}" {% if request.GET.pricing_method == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label class="label">
+                            <span class="label-text">Estado</span>
+                        </label>
+                        <select name="is_active" class="select select-bordered w-full">
+                            <option value="">Todos</option>
+                            <option value="true" {% if request.GET.is_active == 'true' %}selected{% endif %}>Activos</option>
+                            <option value="false" {% if request.GET.is_active == 'false' %}selected{% endif %}>Inactivos</option>
+                        </select>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla -->
+    <div id="product-table">
+        {% include 'catalog/partials/product_table.html' %}
+    </div>
+</div>
+{% endblock %}

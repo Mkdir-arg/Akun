@@ -1,0 +1,133 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ customer.name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">{{ customer.name }}</h1>
+        <div class="flex gap-2">
+            <a href="{% url 'crm:customer_edit' customer.pk %}" class="btn btn-primary">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                </svg>
+                Editar
+            </a>
+            <a href="{% url 'crm:customer_list' %}" class="btn btn-outline">
+                <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+                Volver
+            </a>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Información Básica -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">Información Básica</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Código:</span>
+                        <span class="font-mono">{{ customer.code }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Tipo:</span>
+                        <span class="badge {% if customer.type == 'EMPRESA' %}badge-primary{% else %}badge-secondary{% endif %}">
+                            {{ customer.get_type_display }}
+                        </span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">CUIT/CUIL:</span>
+                        <span class="font-mono">{{ customer.tax_id|default:"-" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Estado:</span>
+                        <span class="badge {% if customer.is_active %}badge-success{% else %}badge-error{% endif %}">
+                            {% if customer.is_active %}Activo{% else %}Inactivo{% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Contacto -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">Contacto</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Email:</span>
+                        <span>{{ customer.email|default:"-" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Teléfono:</span>
+                        <span>{{ customer.phone|default:"-" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Información Comercial -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">Información Comercial</h2>
+                <div class="space-y-3">
+                    <div class="flex justify-between">
+                        <span class="font-medium">Lista de Precios:</span>
+                        <span>{{ customer.default_price_list.name|default:"-" }}</span>
+                    </div>
+                    <div class="flex justify-between">
+                        <span class="font-medium">Límite de Crédito:</span>
+                        <span class="font-mono">${{ customer.credit_limit|floatformat:2 }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Direcciones -->
+        <div class="card bg-base-100 shadow-xl">
+            <div class="card-body">
+                <h2 class="card-title">Direcciones</h2>
+                {% if addresses %}
+                    <div class="space-y-4">
+                        {% for address in addresses %}
+                        <div class="border rounded-lg p-4 {% if address.is_default %}border-primary bg-primary/5{% else %}border-base-300{% endif %}">
+                            <div class="flex justify-between items-start mb-2">
+                                <span class="badge {% if address.kind == 'FACTURACION' %}badge-primary{% else %}badge-secondary{% endif %}">
+                                    {{ address.get_kind_display }}
+                                </span>
+                                {% if address.is_default %}
+                                    <span class="badge badge-outline badge-sm">Por defecto</span>
+                                {% endif %}
+                            </div>
+                            <div class="text-sm space-y-1">
+                                <div>{{ address.street }} {{ address.number }}</div>
+                                <div>{{ address.city }}, {{ address.province }}</div>
+                                <div>CP: {{ address.postal_code }} - {{ address.country }}</div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <div class="text-center py-8 text-gray-500">
+                        No hay direcciones registradas
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Notas -->
+    {% if customer.notes %}
+    <div class="card bg-base-100 shadow-xl mt-6">
+        <div class="card-body">
+            <h2 class="card-title">Notas</h2>
+            <div class="whitespace-pre-wrap">{{ customer.notes }}</div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

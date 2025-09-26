@@ -55,6 +55,13 @@ resetdb: ## Resetear base de datos (DESARROLLO)
 install-dev: ## Instalar dependencias de desarrollo
 	pip install -e ".[dev]"
 
+seed: ## Crear datos de prueba
+	docker-compose exec web python manage.py seed_catalog
+	docker-compose exec web python manage.py seed_crm
+
+perms: ## Asignar permisos por grupos
+	docker-compose exec web python manage.py grant_domain_perms
+
 setup: ## Setup inicial del proyecto
 	cp .env.example .env
 	docker-compose build

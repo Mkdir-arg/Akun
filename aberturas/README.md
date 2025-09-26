@@ -13,6 +13,13 @@ Sistema de gestión integral para empresas dedicadas a la fabricación y venta d
 - **Timezone**: America/Argentina/Buenos_Aires
 - **Idioma**: Español (Argentina)
 
+### Módulos Implementados (Etapa 2)
+
+- **CRM**: Gestión de clientes y direcciones
+- **Catálogo**: Productos, categorías, UoM, impuestos y listas de precios
+- **Precios por área**: Sistema de cálculo de precios por m² para aberturas
+- **Permisos por grupos**: Control de acceso granular por roles
+
 ## 📋 Requisitos Previos
 
 - Docker y Docker Compose
@@ -112,6 +119,8 @@ make tailwind      # Compilar CSS en modo watch
 make lint          # Ejecutar linters
 make format        # Formatear código
 make resetdb       # Resetear base de datos (DESARROLLO)
+make seed          # Crear datos de prueba (catalog + crm)
+make perms         # Asignar permisos por grupos
 ```
 
 ### Comandos Docker directos
@@ -201,6 +210,48 @@ El sistema crea automáticamente los siguientes grupos:
 - **Ventas**: Gestión de pedidos y clientes
 - **Deposito**: Control de inventario
 - **Produccion**: Seguimiento de fabricación
+
+## 🧪 Pruebas Manuales (Etapa 2)
+
+### 1. Configuración inicial
+```bash
+# Ejecutar migraciones
+make migrate
+
+# Crear datos de prueba
+make seed
+
+# Asignar permisos
+make perms
+```
+
+### 2. Pruebas de funcionalidad
+
+1. **Productos**: 
+   - Ir a `/catalog/products/`
+   - Filtrar por categoría, material, tipo de apertura
+   - Crear/editar productos con diferentes métodos de precio
+   - Verificar cálculo de precios por área vs precio fijo
+
+2. **Listas de Precios**:
+   - Ir a `/catalog/pricelists/`
+   - Crear lista de precios y reglas específicas
+   - Probar endpoint de preview: `/catalog/pricing/preview/`
+
+3. **Clientes**:
+   - Ir a `/crm/customers/`
+   - Crear clientes persona/empresa
+   - Agregar direcciones de facturación/envío
+   - Verificar generación automática de códigos
+
+4. **Permisos**:
+   - Crear usuarios en diferentes grupos
+   - Verificar accesos según rol (Ventas, Depósito, Producción)
+
+5. **HTMX**:
+   - Verificar filtros sin recarga de página
+   - Probar ordenamiento por columnas con Hyperscript
+   - Comprobar paginación AJAX
 
 ## 🚀 Despliegue en Producción
 

@@ -1,0 +1,78 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if object %}Editar Lista de Precios{% else %}Nueva Lista de Precios{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            {% if object %}Editar Lista de Precios{% else %}Nueva Lista de Precios{% endif %}
+        </h1>
+        <a href="{% url 'catalog:pricelist_list' %}" class="btn btn-outline">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+            </svg>
+            Volver
+        </a>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="space-y-4">
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Nombre *</span>
+                            </label>
+                            {{ form.name }}
+                            {% if form.name.errors %}
+                                <div class="text-error text-sm mt-1">{{ form.name.errors.0 }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Moneda</span>
+                            </label>
+                            {{ form.currency }}
+                        </div>
+
+                        <div class="flex gap-4">
+                            <label class="label cursor-pointer">
+                                {{ form.is_default }}
+                                <span class="label-text ml-2">Lista por defecto</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="space-y-4">
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Vigencia Desde</span>
+                            </label>
+                            {{ form.active_from }}
+                        </div>
+
+                        <div>
+                            <label class="label">
+                                <span class="label-text">Vigencia Hasta</span>
+                            </label>
+                            {{ form.active_to }}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end mt-6">
+                    <button type="submit" class="btn btn-primary">
+                        {% if object %}Actualizar{% else %}Crear{% endif %} Lista
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

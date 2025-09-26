@@ -4,6 +4,11 @@ from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin
 from django.utils.decorators import method_decorator
 from django.views.generic import TemplateView
+from rest_framework.views import APIView
+from rest_framework.response import Response
+from rest_framework import status
+from django.contrib.auth import login, logout
+from apps.accounts.serializers import LoginSerializer, UserSerializer
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -48,3 +53,35 @@ def htmx_example(request):
         return render(request, 'ui/partials/items_list.html', {'items': items})
     
     return render(request, 'ui/htmx_example.html', {'items': items})
+
+class LoginAPIView(APIView):
+    def post(self, request):
+        serializer = LoginSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.validated_data['user']
+            login(request, user)
+            return Response({
+                'user': UserSerializer(user).data,
+                'message': 'Login exitoso'
+            })
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class LogoutAPIView(APIView):
+    def post(self, request):
+        logout(request)
+        return Response({'message': 'Logout exitoso'})
+
+class DashboardAPIView(APIView):
+    def get(self, request):
+        if not request.user.is_authenticated:
+            return Response({'error': 'No autenticado'}, status=status.HTTP_401_UNAUTHORIZED)
+        
+        return Response({
+            'user': UserSerializer(request.user).data,
+            'stats': {
+                'total_users': 25,
+                'total_orders': 142,
+                'total_products': 89,
+                'revenue': 45600
+            }
+        })

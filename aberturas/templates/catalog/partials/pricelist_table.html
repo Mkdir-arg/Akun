@@ -1,0 +1,89 @@
+<div class="card bg-base-100 shadow-xl">
+    <div class="card-body">
+        <div class="overflow-x-auto">
+            <table class="table table-zebra w-full">
+                <thead>
+                    <tr>
+                        <th>
+                            <button _="on click toggle .asc then toggle .desc on me then 
+                                      set @hx-get to '{% url 'catalog:pricelist_list' %}?order_by=name&direction=' + 
+                                      (if I.classList.contains('desc') then 'desc' else 'asc') then 
+                                      trigger htmx:configRequest"
+                                    hx-target="#pricelist-table" class="btn btn-ghost btn-sm">
+                                Nombre
+                                <svg class="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16V4m0 0L3 8m4-4l4 4m6 0v12m0 0l4-4m-4 4l-4-4"></path>
+                                </svg>
+                            </button>
+                        </th>
+                        <th>Moneda</th>
+                        <th>Por Defecto</th>
+                        <th>Vigencia Desde</th>
+                        <th>Vigencia Hasta</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for pricelist in pricelists %}
+                    <tr>
+                        <td class="font-medium">{{ pricelist.name }}</td>
+                        <td>{{ pricelist.currency }}</td>
+                        <td>
+                            <span class="badge {% if pricelist.is_default %}badge-success{% else %}badge-outline{% endif %}">
+                                {% if pricelist.is_default %}Sí{% else %}No{% endif %}
+                            </span>
+                        </td>
+                        <td>{{ pricelist.active_from|default:"-" }}</td>
+                        <td>{{ pricelist.active_to|default:"-" }}</td>
+                        <td>
+                            <div class="flex gap-2">
+                                <a href="{% url 'catalog:pricelist_detail' pricelist.pk %}" class="btn btn-ghost btn-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'catalog:pricelist_edit' pricelist.pk %}" class="btn btn-ghost btn-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z"></path>
+                                    </svg>
+                                </a>
+                                <a href="{% url 'catalog:pricelist_rules' pricelist.pk %}" class="btn btn-ghost btn-sm">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path>
+                                    </svg>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="text-center py-8 text-gray-500">
+                            No se encontraron listas de precios
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Paginación -->
+        {% if is_paginated %}
+        <div class="flex justify-center mt-6">
+            <div class="btn-group">
+                {% if page_obj.has_previous %}
+                    <button hx-get="{% url 'catalog:pricelist_list' %}?page={{ page_obj.previous_page_number }}" 
+                            hx-target="#pricelist-table" class="btn">«</button>
+                {% endif %}
+                
+                <button class="btn btn-active">{{ page_obj.number }}</button>
+                
+                {% if page_obj.has_next %}
+                    <button hx-get="{% url 'catalog:pricelist_list' %}?page={{ page_obj.next_page_number }}" 
+                            hx-target="#pricelist-table" class="btn">»</button>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
