@@ -20,6 +20,7 @@ interface User {
 
 function App() {
   const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
   const [currentPath, setCurrentPath] = useState(window.location.hash.slice(1) || '/');
 
   useEffect(() => {
@@ -31,6 +32,26 @@ function App() {
     return () => window.removeEventListener('hashchange', handleHashChange);
   }, []);
 
+  useEffect(() => {
+    checkSession();
+  }, []);
+
+  const checkSession = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/profile/`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const userData = await response.json();
+        setUser(userData);
+      }
+    } catch (error) {
+      console.log('No hay sesión activa');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const handleLoginSuccess = (userData: User) => {
     setUser(userData);
   };
@@ -39,6 +60,14 @@ function App() {
     setUser(null);
     window.location.hash = '/';
   };
+
+  if (loading) {
+    return (
+      <div className="App flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   if (!user) {
     return (

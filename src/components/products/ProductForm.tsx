@@ -29,7 +29,8 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     sku: '',
     name: '',
     category: '',
-    uom: '',
+    subcategory: '',
+    uom: '2', // M2 por defecto (ID 2)
     material: 'ALUMINIO',
     opening_type: 'CORREDIZA',
     glass_type: 'DVH',
@@ -37,7 +38,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     width_mm: '',
     height_mm: '',
     weight_kg: '',
-    tax: '',
+    tax: '1', // IVA 21% por defecto (ID 1)
     pricing_method: 'FIXED',
     base_price: '0',
     price_per_m2: '0',
@@ -47,6 +48,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
   });
 
   const [categories, setCategories] = useState<Category[]>([]);
+  const [subcategories, setSubcategories] = useState<{value: string, label: string}[]>([]);
   const [uoms, setUoms] = useState<UoM[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
   const [loading, setLoading] = useState(true);
@@ -82,11 +84,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
         const taxRatesData = await taxRatesRes.json();
         setTaxRates(taxRatesData.results || taxRatesData);
         
-        // Seleccionar tasa por defecto
-        const defaultTax = (taxRatesData.results || taxRatesData).find((tax: TaxRate) => tax.name.includes('21%'));
-        if (defaultTax && !productId) {
-          setFormData(prev => ({ ...prev, tax: defaultTax.id.toString() }));
-        }
+        // Los valores por defecto ya están en el estado inicial
       }
     } catch (error) {
       console.error('Error fetching form data:', error);
@@ -100,10 +98,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
       });
       if (response.ok) {
         const product = await response.json();
+        const categoryId = product.category.toString();
         setFormData({
           sku: product.sku,
           name: product.name,
-          category: product.category.toString(),
+          category: categoryId,
+          subcategory: product.subcategory || '',
           uom: product.uom.toString(),
           material: product.material,
           opening_type: product.opening_type,
@@ -120,6 +120,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
           is_service: product.is_service,
           is_active: product.is_active
         });
+        
+        // Load subcategories for existing product
+        if (categoryId) {
+          await fetchSubcategories(categoryId);
+        }
       }
     } catch (error) {
       console.error('Error fetching product:', error);
@@ -168,12 +173,34 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     }
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
+    
     setFormData({
       ...formData,
-      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value
+      [name]: type === 'checkbox' ? (e.target as HTMLInputElement).checked : value,
+      ...(name === 'category' && { subcategory: '' }) // Reset subcategory when category changes
     });
+    
+    // Load subcategories when category changes
+    if (name === 'category' && value) {
+      await fetchSubcategories(value);
+    }
+  };
+  
+  const fetchSubcategories = async (categoryId: string) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/categories/${categoryId}/subcategories/`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setSubcategories(data.subcategories || []);
+      }
+    } catch (error) {
+      console.error('Error fetching subcategories:', error);
+      setSubcategories([]);
+    }
   };
 
   if (loading) {
@@ -235,6 +262,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
                   {categories.map((category) => (
                     <option key={category.id} value={category.id}>
                       {category.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Subcategoría
+                </label>
+                <select
+                  name="subcategory"
+                  value={formData.subcategory}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  disabled={!formData.category}
+                >
+                  <option value="">Seleccionar subcategoría</option>
+                  {subcategories.map((subcategory) => (
+                    <option key={subcategory.value} value={subcategory.value}>
+                      {subcategory.label}
                     </option>
                   ))}
                 </select>

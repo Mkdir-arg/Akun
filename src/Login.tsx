@@ -42,9 +42,15 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50">
-      <div className="w-full max-w-md">
-        <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-8 border border-white/20">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-32 overflow-hidden">
+      <img
+        src="/login-wave.svg"
+        alt=""
+        aria-hidden="true"
+        className="absolute inset-x-0 bottom-0 w-full max-w-none pointer-events-none select-none"
+      />
+      <div className="relative w-full max-w-md z-10">
+        <div className="relative bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-8 border border-white/20">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-28 h-28 mx-auto mb-4 flex items-center justify-center">
@@ -142,3 +148,4 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
 };
 
 export default Login;
+

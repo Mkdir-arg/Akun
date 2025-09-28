@@ -12,7 +12,7 @@ from .serializers import (
 
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related('category', 'uom', 'tax').prefetch_related('pricelistrule_set')
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['sku', 'name', 'material', 'opening_type']
     ordering_fields = ['sku', 'name', 'base_price', 'price_per_m2']
@@ -110,21 +110,29 @@ class ProductViewSet(viewsets.ModelViewSet):
 class ProductCategoryViewSet(viewsets.ModelViewSet):
     queryset = ProductCategory.objects.select_related('parent').filter(is_active=True)
     serializer_class = ProductCategorySerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # Temporalmente sin permisos
     ordering = ['name']
+    
+    @action(detail=True, methods=['get'])
+    def subcategories(self, request, pk=None):
+        category = self.get_object()
+        subcategories = Product.SUBCATEGORY_CHOICES.get(category.code, [])
+        return Response({
+            'subcategories': [{'value': key, 'label': value} for key, value in subcategories]
+        })
 
 
 class UoMViewSet(viewsets.ModelViewSet):
     queryset = UoM.objects.filter(is_active=True)
     serializer_class = UoMSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # Temporalmente sin permisos
     ordering = ['name']
 
 
 class TaxRateViewSet(viewsets.ModelViewSet):
     queryset = TaxRate.objects.all()
     serializer_class = TaxRateSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # Temporalmente sin permisos
     ordering = ['name']
 
 

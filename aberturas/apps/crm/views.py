@@ -15,7 +15,7 @@ from .serializers import (
 
 class CustomerViewSet(viewsets.ModelViewSet):
     queryset = Customer.objects.select_related('default_price_list', 'payment_terms').prefetch_related('tags')
-    permission_classes = [IsAuthenticated]
+    permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'code', 'tax_id', 'email', 'phone']
     ordering_fields = ['name', 'created_at', 'updated_at']

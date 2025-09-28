@@ -88,9 +88,45 @@ class Product(models.Model):
         ('AREA', 'Por Área'),
     ]
     
+    # Subcategorías por categoría
+    SUBCATEGORY_CHOICES = {
+        'ventanas': [
+            ('CORREDIZA_SIMPLE', 'Corrediza Simple'),
+            ('CORREDIZA_DOBLE', 'Corrediza Doble'),
+            ('BATIENTE_SIMPLE', 'Batiente Simple'),
+            ('BATIENTE_DOBLE', 'Batiente Doble'),
+            ('OSCILOBATIENTE', 'Oscilobatiente'),
+            ('PAÑO_FIJO', 'Paño Fijo'),
+        ],
+        'puertas': [
+            ('ENTRADA_PRINCIPAL', 'Entrada Principal'),
+            ('BALCON', 'Balcón'),
+            ('INTERIOR', 'Interior'),
+            ('PLEGADIZA', 'Plegadiza'),
+        ],
+        'portones': [
+            ('CORREDIZO', 'Corredizo'),
+            ('LEVADIZO', 'Levadizo'),
+            ('BATIENTE', 'Batiente'),
+        ],
+        'accesorios': [
+            ('HERRAJES', 'Herrajes'),
+            ('VIDRIOS', 'Vidrios'),
+            ('PERFILES', 'Perfiles'),
+            ('SELLADORES', 'Selladores'),
+        ],
+        'herrajes': [
+            ('CERRADURAS', 'Cerraduras'),
+            ('BISAGRAS', 'Bisagras'),
+            ('MANIJAS', 'Manijas'),
+            ('RIELES', 'Rieles'),
+        ],
+    }
+    
     sku = models.CharField(max_length=50, unique=True, db_index=True)
     name = models.CharField(max_length=200, db_index=True)
     category = models.ForeignKey(ProductCategory, on_delete=models.PROTECT)
+    subcategory = models.CharField(max_length=100, blank=True, null=True)
     uom = models.ForeignKey(UoM, on_delete=models.PROTECT, default=1)
     material = models.CharField(max_length=20, choices=MATERIAL_CHOICES)
     opening_type = models.CharField(max_length=20, choices=OPENING_TYPE_CHOICES)
