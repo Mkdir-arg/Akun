@@ -13,6 +13,19 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Development logging
 LOGGING['root']['level'] = 'DEBUG'
 
+# CSRF settings for development
+CSRF_TRUSTED_ORIGINS = [
+    'http://localhost:3001',
+    'http://127.0.0.1:3001',
+]
+
+# Disable secure cookies for development
+SESSION_COOKIE_SECURE = False
+CSRF_COOKIE_SECURE = False
+
+# Allow all origins for CORS in development
+CORS_ALLOW_ALL_ORIGINS = True
+
 # Django Debug Toolbar (optional)
 if DEBUG:
     try:

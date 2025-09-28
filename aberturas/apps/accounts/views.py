@@ -144,10 +144,11 @@ class APITestView(View):
         return JsonResponse({'message': 'POST funcionando', 'data': 'recibido'})
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class RoleViewSet(viewsets.ModelViewSet):
     queryset = Role.objects.all()
     serializer_class = RoleSerializer
-    permission_classes = [AdminOnlyPermission]
+    permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'description']
     ordering_fields = ['name', 'created_at']
@@ -175,6 +176,7 @@ class RoleViewSet(viewsets.ModelViewSet):
         return Response({'status': 'Rol desactivado'})
 
 
+@method_decorator(csrf_exempt, name='dispatch')
 class UserViewSet(viewsets.ModelViewSet):
     queryset = User.objects.select_related('role')
     serializer_class = UserSerializer

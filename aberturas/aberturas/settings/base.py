@@ -57,7 +57,7 @@ MIDDLEWARE = [
     'django.contrib.sessions.middleware.SessionMiddleware',
     # 'apps.core.middleware.SessionSecurityMiddleware',  # Temporalmente deshabilitado
     'django.middleware.common.CommonMiddleware',
-    'django.middleware.csrf.CsrfViewMiddleware',
+    # 'django.middleware.csrf.CsrfViewMiddleware',  # Temporalmente deshabilitado para desarrollo
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'apps.core.middleware.TransactionLoggerMiddleware',
     'django_htmx.middleware.HtmxMiddleware',
@@ -200,9 +200,7 @@ LOGGING = {
 
 # REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework.authentication.SessionAuthentication',
-    ],
+    'DEFAULT_AUTHENTICATION_CLASSES': [],  # Sin autenticación para desarrollo
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Temporalmente para debug
     ],

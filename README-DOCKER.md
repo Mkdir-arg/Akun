@@ -28,10 +28,10 @@ docker-compose -f docker-compose.unified.yml up --build
 
 ## URLs de acceso
 
-- **Frontend React:** http://localhost:3000
-- **Backend Django:** http://localhost:8000
-- **Admin Django:** http://localhost:8000/admin
-- **MySQL:** localhost:3306
+- **Frontend React:** http://localhost:3001
+- **Backend Django:** http://localhost:8002
+- **Admin Django:** http://localhost:8002/admin
+- **MySQL:** localhost:3309
 - **Redis:** localhost:6379
 
 ## Credenciales por defecto
@@ -56,6 +56,6 @@ docker-compose -f docker-compose.unified.yml exec backend python manage.py creat
 
 ## Desarrollo
 
-- **React:** Se recarga automáticamente en http://localhost:3000
-- **Django:** Se recarga automáticamente en http://localhost:8000
+- **React:** Se recarga automáticamente en http://localhost:3001
+- **Django:** Se recarga automáticamente en http://localhost:8002
 - **Base de datos:** Persistente en volumen Docker
