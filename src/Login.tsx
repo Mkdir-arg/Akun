@@ -47,8 +47,12 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-8 border border-white/20">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl mx-auto mb-4 flex items-center justify-center">
-              <Lock className="w-8 h-8 text-white" />
+            <div className="w-28 h-28 mx-auto mb-4 flex items-center justify-center">
+              <img 
+                src="/AKUN-LOGO.webp" 
+                alt="AKUN Logo" 
+                className="w-full h-full object-contain"
+              />
             </div>
             <h1 className="text-3xl font-bold text-gray-800 mb-2">Bienvenido a AKUN</h1>
             <p className="text-gray-600">Ingresa a tu cuenta</p>
