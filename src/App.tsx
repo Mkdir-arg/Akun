@@ -7,6 +7,9 @@ import CustomerDetail from './components/customers/CustomerDetail';
 import CustomerEdit from './components/customers/CustomerEdit';
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
+import QuoteList from './components/quotes/QuoteList';
+import QuoteForm from './components/quotes/QuoteForm';
+import OrderList from './components/orders/OrderList';
 import SettingsLayout from './components/settings/SettingsLayout';
 import Layout from './components/Layout';
 import './index.css';
@@ -83,6 +86,20 @@ function App() {
     }
     if (currentPath === '/productos') {
       return <ProductList />;
+    }
+    if (currentPath === '/presupuestos') {
+      return <QuoteList />;
+    }
+    if (currentPath === '/presupuestos/nuevo') {
+      return (
+        <QuoteForm 
+          onBack={() => window.location.hash = '/presupuestos'}
+          onSave={() => window.location.hash = '/presupuestos'}
+        />
+      );
+    }
+    if (currentPath === '/pedidos') {
+      return <OrderList />;
     }
     if (currentPath === '/productos/nuevo') {
       return (

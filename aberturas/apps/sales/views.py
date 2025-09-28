@@ -1,0 +1,217 @@
+from rest_framework import viewsets, status, filters
+from rest_framework.decorators import action
+from rest_framework.response import Response
+from django.db.models import Q
+from django.utils import timezone
+from .models import Quote, QuoteItem, Order, OrderItem
+from .serializers import (
+    QuoteSerializer, QuoteDetailSerializer, QuoteItemSerializer,
+    OrderSerializer, OrderDetailSerializer, OrderItemSerializer
+)
+
+
+class QuoteViewSet(viewsets.ModelViewSet):
+    queryset = Quote.objects.select_related('customer', 'created_by', 'assigned_to').prefetch_related('items')
+    permission_classes = []  # Temporalmente sin permisos
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['number', 'title', 'customer__name', 'customer__tax_id']
+    ordering_fields = ['number', 'created_at', 'valid_until', 'total']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return QuoteDetailSerializer
+        return QuoteSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtros
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+            
+        priority = self.request.query_params.get('priority')
+        if priority:
+            queryset = queryset.filter(priority=priority)
+            
+        customer = self.request.query_params.get('customer')
+        if customer:
+            queryset = queryset.filter(customer=customer)
+            
+        assigned_to = self.request.query_params.get('assigned_to')
+        if assigned_to:
+            queryset = queryset.filter(assigned_to=assigned_to)
+            
+        return queryset
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+    
+    @action(detail=True, methods=['post'])
+    def convert_to_order(self, request, pk=None):
+        """Convertir presupuesto a pedido"""
+        quote = self.get_object()
+        
+        try:
+            order = Order.create_from_quote(
+                quote=quote,
+                created_by=request.user if request.user.is_authenticated else None
+            )
+            return Response({
+                'message': 'Presupuesto convertido a pedido exitosamente',
+                'order_id': order.id,
+                'order_number': order.number
+            })
+        except Exception as e:
+            return Response(
+                {'error': str(e)},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+    
+    @action(detail=True, methods=['post'])
+    def send(self, request, pk=None):
+        """Marcar presupuesto como enviado"""
+        quote = self.get_object()
+        quote.status = 'SENT'
+        quote.save()
+        return Response({'message': 'Presupuesto marcado como enviado'})
+    
+    @action(detail=True, methods=['post'])
+    def approve(self, request, pk=None):
+        """Aprobar presupuesto"""
+        quote = self.get_object()
+        quote.status = 'APPROVED'
+        quote.save()
+        return Response({'message': 'Presupuesto aprobado'})
+    
+    @action(detail=True, methods=['post'])
+    def reject(self, request, pk=None):
+        """Rechazar presupuesto"""
+        quote = self.get_object()
+        quote.status = 'REJECTED'
+        quote.save()
+        return Response({'message': 'Presupuesto rechazado'})
+
+
+class QuoteItemViewSet(viewsets.ModelViewSet):
+    serializer_class = QuoteItemSerializer
+    permission_classes = []  # Temporalmente sin permisos
+    
+    def get_queryset(self):
+        return QuoteItem.objects.select_related('quote', 'product')
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        quote_id = self.request.query_params.get('quote')
+        if quote_id:
+            queryset = queryset.filter(quote=quote_id)
+        return queryset
+
+
+class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.select_related('customer', 'quote', 'created_by', 'assigned_to').prefetch_related('items')
+    permission_classes = []  # Temporalmente sin permisos
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['number', 'title', 'customer__name', 'customer__tax_id']
+    ordering_fields = ['number', 'order_date', 'delivery_date', 'total']
+    ordering = ['-created_at']
+    
+    def get_serializer_class(self):
+        if self.action == 'retrieve':
+            return OrderDetailSerializer
+        return OrderSerializer
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        
+        # Filtros
+        status_filter = self.request.query_params.get('status')
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+            
+        payment_status = self.request.query_params.get('payment_status')
+        if payment_status:
+            queryset = queryset.filter(payment_status=payment_status)
+            
+        customer = self.request.query_params.get('customer')
+        if customer:
+            queryset = queryset.filter(customer=customer)
+            
+        order_type = self.request.query_params.get('type')
+        if order_type:
+            queryset = queryset.filter(type=order_type)
+            
+        return queryset
+    
+    def perform_create(self, serializer):
+        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+    
+    @action(detail=True, methods=['post'])
+    def confirm(self, request, pk=None):
+        """Confirmar pedido"""
+        order = self.get_object()
+        order.status = 'CONFIRMED'
+        order.save()
+        return Response({'message': 'Pedido confirmado'})
+    
+    @action(detail=True, methods=['post'])
+    def start_production(self, request, pk=None):
+        """Iniciar producción"""
+        order = self.get_object()
+        order.status = 'IN_PRODUCTION'
+        order.save()
+        return Response({'message': 'Producción iniciada'})
+    
+    @action(detail=True, methods=['post'])
+    def mark_ready(self, request, pk=None):
+        """Marcar como listo"""
+        order = self.get_object()
+        order.status = 'READY'
+        order.save()
+        return Response({'message': 'Pedido marcado como listo'})
+    
+    @action(detail=True, methods=['post'])
+    def deliver(self, request, pk=None):
+        """Marcar como entregado"""
+        order = self.get_object()
+        order.status = 'DELIVERED'
+        order.delivered_at = timezone.now()
+        order.save()
+        return Response({'message': 'Pedido marcado como entregado'})
+    
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancelar pedido"""
+        order = self.get_object()
+        order.status = 'CANCELLED'
+        order.save()
+        return Response({'message': 'Pedido cancelado'})
+
+
+class OrderItemViewSet(viewsets.ModelViewSet):
+    serializer_class = OrderItemSerializer
+    permission_classes = []  # Temporalmente sin permisos
+    
+    def get_queryset(self):
+        queryset = OrderItem.objects.select_related('order', 'product')
+        order_id = self.request.query_params.get('order')
+        if order_id:
+            queryset = queryset.filter(order=order_id)
+        return queryset
+    
+    @action(detail=True, methods=['post'])
+    def update_production_status(self, request, pk=None):
+        """Actualizar estado de producción"""
+        item = self.get_object()
+        new_status = request.data.get('production_status')
+        
+        if new_status in ['PENDING', 'IN_PROGRESS', 'COMPLETED']:
+            item.production_status = new_status
+            item.save()
+            return Response({'message': f'Estado actualizado a {new_status}'})
+        
+        return Response(
+            {'error': 'Estado de producción inválido'},
+            status=status.HTTP_400_BAD_REQUEST
+        )
