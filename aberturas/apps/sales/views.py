@@ -14,7 +14,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
     queryset = Quote.objects.select_related('customer', 'created_by', 'assigned_to').prefetch_related('items')
     permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['number', 'title', 'customer__name', 'customer__tax_id']
+    search_fields = ['number', 'customer__name', 'customer__tax_id']
     ordering_fields = ['number', 'created_at', 'valid_until', 'total']
     ordering = ['-created_at']
     
@@ -45,8 +45,21 @@ class QuoteViewSet(viewsets.ModelViewSet):
             
         return queryset
     
+    def create(self, request, *args, **kwargs):
+        print(f"DEBUG - Request data: {request.data}")
+        serializer = self.get_serializer(data=request.data)
+        print(f"DEBUG - Serializer is_valid: {serializer.is_valid()}")
+        if not serializer.is_valid():
+            print(f"DEBUG - Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        from apps.accounts.models import User
+        user = self.request.user if self.request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
+        serializer.save(created_by=user)
     
     @action(detail=True, methods=['post'])
     def convert_to_order(self, request, pk=None):
@@ -99,14 +112,22 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
     permission_classes = []  # Temporalmente sin permisos
     
     def get_queryset(self):
-        return QuoteItem.objects.select_related('quote', 'product')
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
+        queryset = QuoteItem.objects.select_related('quote', 'product')
         quote_id = self.request.query_params.get('quote')
         if quote_id:
             queryset = queryset.filter(quote=quote_id)
         return queryset
+    
+    def create(self, request, *args, **kwargs):
+        print(f"DEBUG QuoteItem - Request data: {request.data}")
+        serializer = self.get_serializer(data=request.data)
+        print(f"DEBUG QuoteItem - Serializer is_valid: {serializer.is_valid()}")
+        if not serializer.is_valid():
+            print(f"DEBUG QuoteItem - Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_create(serializer)
+        headers = self.get_success_headers(serializer.data)
+        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
 class OrderViewSet(viewsets.ModelViewSet):
@@ -145,7 +166,9 @@ class OrderViewSet(viewsets.ModelViewSet):
         return queryset
     
     def perform_create(self, serializer):
-        serializer.save(created_by=self.request.user if self.request.user.is_authenticated else None)
+        from apps.accounts.models import User
+        user = self.request.user if self.request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
+        serializer.save(created_by=user)
     
     @action(detail=True, methods=['post'])
     def confirm(self, request, pk=None):

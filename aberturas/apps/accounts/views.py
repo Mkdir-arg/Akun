@@ -197,6 +197,10 @@ class UserViewSet(viewsets.ModelViewSet):
         if role:
             queryset = queryset.filter(role=role)
             
+        role_name = self.request.query_params.get('role_name')
+        if role_name:
+            queryset = queryset.filter(role__name=role_name)
+            
         return queryset
     
     @action(detail=True, methods=['post'])

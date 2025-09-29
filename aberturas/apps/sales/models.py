@@ -39,7 +39,6 @@ class Quote(models.Model):
     valid_until = models.DateField(null=True, blank=True)
     
     # Información comercial
-    title = models.CharField(max_length=200)
     description = models.TextField(blank=True)
     notes = models.TextField(blank=True)
     
@@ -98,7 +97,7 @@ class Quote(models.Model):
 class QuoteItem(models.Model):
     """Línea de presupuesto"""
     quote = models.ForeignKey(Quote, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('catalog.Product', on_delete=models.PROTECT)
+    product = models.ForeignKey('catalog.Product', on_delete=models.PROTECT, null=True, blank=True)
     
     # Especificaciones del producto
     description = models.TextField(blank=True)  # Descripción personalizada
@@ -119,6 +118,9 @@ class QuoteItem(models.Model):
     
     # Orden de visualización
     line_number = models.PositiveSmallIntegerField(default=1)
+    
+    # Para servicios
+    assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_quote_items')
     
     class Meta:
         verbose_name = 'Línea de Presupuesto'
@@ -254,7 +256,7 @@ class Order(models.Model):
             price_list=quote.price_list,
             created_by=created_by,
             type='FROM_QUOTE',
-            title=quote.title,
+            title=f'Pedido desde {quote.number}',
             description=quote.description,
             notes=quote.notes,
         )

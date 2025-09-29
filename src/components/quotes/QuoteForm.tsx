@@ -74,15 +74,16 @@ const QuoteForm: React.FC<QuoteFormProps> = ({ onBack, onSave }) => {
         },
         credentials: 'include',
         body: JSON.stringify({
-          ...formData,
           customer: parseInt(formData.customer),
-          title: `Presupuesto para ${selectedCustomer?.name || 'Cliente'}`,
-          estimated_delivery_days: parseInt(formData.estimated_delivery_days)
+          priority: formData.priority,
+          valid_until: formData.valid_until || null,
+          notes: formData.notes || ''
         })
       });
 
       if (response.ok) {
-        onSave();
+        const data = await response.json();
+        window.location.hash = `/presupuestos/${data.id}`;
       }
     } catch (error) {
       console.error('Error creating quote:', error);

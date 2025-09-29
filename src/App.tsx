@@ -9,6 +9,7 @@ import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
 import QuoteList from './components/quotes/QuoteList';
 import QuoteForm from './components/quotes/QuoteForm';
+import QuoteDetail from './components/quotes/QuoteDetail';
 import OrderList from './components/orders/OrderList';
 import SettingsLayout from './components/settings/SettingsLayout';
 import Layout from './components/Layout';
@@ -95,6 +96,15 @@ function App() {
         <QuoteForm 
           onBack={() => window.location.hash = '/presupuestos'}
           onSave={() => window.location.hash = '/presupuestos'}
+        />
+      );
+    }
+    if (currentPath.startsWith('/presupuestos/') && !currentPath.endsWith('/nuevo') && !currentPath.endsWith('/editar')) {
+      const quoteId = currentPath.split('/')[2];
+      return (
+        <QuoteDetail 
+          quoteId={quoteId}
+          onBack={() => window.location.hash = '/presupuestos'}
         />
       );
     }

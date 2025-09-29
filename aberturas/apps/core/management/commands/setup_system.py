@@ -72,6 +72,12 @@ class Command(BaseCommand):
                 'can_access_orders': True,
                 'can_create': True,
                 'can_edit': True,
+            },
+            {
+                'name': 'Colocadores',
+                'description': 'Personal de instalación y colocación',
+                'can_access_orders': True,
+                'can_edit': True,
             }
         ]
         
