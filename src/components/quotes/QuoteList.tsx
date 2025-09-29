@@ -535,8 +535,12 @@ const QuoteList: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {quotes.map((quote) => (
-                    <tr key={quote.id} className="hover:bg-gray-50">
+                  {quotes.map((quote, index) => (
+                    <tr 
+                      key={quote.id} 
+                      className="group hover:bg-gray-50 transition-all duration-200 hover:shadow-sm animate-fade-in"
+                      style={{ animationDelay: `${index * 50}ms` }}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
                           {quote.number}
@@ -561,7 +565,7 @@ const QuoteList: React.FC = () => {
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-2">
+                        <div className="flex items-center justify-end space-x-1 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
                           <button
                             onClick={() => window.location.hash = `/presupuestos/${quote.id}`}
                             className="text-blue-600 hover:text-blue-900"

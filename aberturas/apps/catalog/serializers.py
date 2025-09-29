@@ -40,7 +40,7 @@ class ProductSerializer(serializers.ModelSerializer):
             'id', 'sku', 'name', 'category', 'category_name', 'uom', 'uom_name',
             'material', 'opening_type', 'glass_type', 'color_code',
             'width_mm', 'height_mm', 'weight_kg', 'tax', 'tax_name', 'tax_rate',
-            'pricing_method', 'base_price', 'price_per_m2', 'min_area_m2',
+            'currency', 'pricing_method', 'base_price', 'price_per_m2', 'min_area_m2',
             'is_service', 'is_active'
         ]
         

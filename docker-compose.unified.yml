@@ -15,18 +15,7 @@ services:
     depends_on:
       - db
       - redis
-    command: >
-      bash -c "
-      echo 'Esperando a que la base de datos esté disponible...' &&
-      while ! python manage.py check --database default; do
-        echo 'Base de datos no disponible, esperando...' &&
-        sleep 2
-      done &&
-      echo 'Base de datos disponible!' &&
-      python manage.py makemigrations &&
-      python manage.py migrate &&
-      python manage.py runserver 0.0.0.0:8000
-      "
+    command: python manage.py runserver 0.0.0.0:8000
 
   # React Frontend
   frontend:

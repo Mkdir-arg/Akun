@@ -24,6 +24,13 @@ interface TaxRate {
   rate: string;
 }
 
+interface Currency {
+  id: number;
+  code: string;
+  name: string;
+  symbol: string;
+}
+
 const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) => {
   const [formData, setFormData] = useState({
     sku: '',
@@ -39,6 +46,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     height_mm: '',
     weight_kg: '',
     tax: '1', // IVA 21% por defecto (ID 1)
+    currency: '1', // Moneda por defecto
     pricing_method: 'FIXED',
     base_price: '0',
     price_per_m2: '0',
@@ -51,6 +59,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
   const [subcategories, setSubcategories] = useState<{value: string, label: string}[]>([]);
   const [uoms, setUoms] = useState<UoM[]>([]);
   const [taxRates, setTaxRates] = useState<TaxRate[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -64,10 +73,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
 
   const fetchFormData = async () => {
     try {
-      const [categoriesRes, uomsRes, taxRatesRes] = await Promise.all([
+      const [categoriesRes, uomsRes, taxRatesRes, currenciesRes] = await Promise.all([
         fetch(`${process.env.REACT_APP_API_URL}/api/categories/`, { credentials: 'include' }),
         fetch(`${process.env.REACT_APP_API_URL}/api/uoms/`, { credentials: 'include' }),
-        fetch(`${process.env.REACT_APP_API_URL}/api/tax-rates/`, { credentials: 'include' })
+        fetch(`${process.env.REACT_APP_API_URL}/api/tax-rates/`, { credentials: 'include' }),
+        fetch(`${process.env.REACT_APP_API_URL}/api/currencies/`, { credentials: 'include' })
       ]);
 
       if (categoriesRes.ok) {
@@ -83,8 +93,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
       if (taxRatesRes.ok) {
         const taxRatesData = await taxRatesRes.json();
         setTaxRates(taxRatesData.results || taxRatesData);
-        
-        // Los valores por defecto ya están en el estado inicial
+      }
+
+      if (currenciesRes.ok) {
+        const currenciesData = await currenciesRes.json();
+        setCurrencies(currenciesData.results || currenciesData);
       }
     } catch (error) {
       console.error('Error fetching form data:', error);
@@ -113,6 +126,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
           height_mm: product.height_mm?.toString() || '',
           weight_kg: product.weight_kg?.toString() || '',
           tax: product.tax.toString(),
+          currency: product.currency?.toString() || '1',
           pricing_method: product.pricing_method,
           base_price: product.base_price,
           price_per_m2: product.price_per_m2,
@@ -142,6 +156,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
         category: parseInt(formData.category),
         uom: parseInt(formData.uom),
         tax: parseInt(formData.tax),
+        currency: parseInt(formData.currency),
         width_mm: formData.width_mm ? parseInt(formData.width_mm) : null,
         height_mm: formData.height_mm ? parseInt(formData.height_mm) : null,
         weight_kg: formData.weight_kg ? parseFloat(formData.weight_kg) : null,
@@ -149,6 +164,12 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
         price_per_m2: parseFloat(formData.price_per_m2),
         min_area_m2: parseFloat(formData.min_area_m2)
       };
+      
+      // Si es un producto nuevo y no tiene SKU, no enviarlo para que se genere automáticamente
+      if (!productId && !formData.sku) {
+        const { sku, ...dataWithoutSku } = submitData;
+        Object.assign(submitData, dataWithoutSku);
+      }
 
       const url = productId 
         ? `${process.env.REACT_APP_API_URL}/api/products/${productId}/`
@@ -185,6 +206,10 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     // Load subcategories when category changes
     if (name === 'category' && value) {
       await fetchSubcategories(value);
+      // Generate SKU when category changes
+      if (!productId) { // Only for new products
+        await generateSKU(value);
+      }
     }
   };
   
@@ -200,6 +225,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     } catch (error) {
       console.error('Error fetching subcategories:', error);
       setSubcategories([]);
+    }
+  };
+
+  const generateSKU = async (categoryId: string) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/products/generate-sku/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ category_id: parseInt(categoryId) })
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        setFormData(prev => ({ ...prev, sku: data.sku }));
+      }
+    } catch (error) {
+      console.error('Error generating SKU:', error);
     }
   };
 
@@ -242,9 +287,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
                   name="sku"
                   value={formData.sku}
                   onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50"
+                  placeholder="Se genera automáticamente al seleccionar categoría"
+                  readOnly={!productId}
                   required
                 />
+                {!productId && (
+                  <p className="text-xs text-gray-500 mt-1">
+                    El SKU se genera automáticamente basado en la categoría
+                  </p>
+                )}
               </div>
 
               <div>
@@ -404,6 +456,26 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
                   {taxRates.map((tax) => (
                     <option key={tax.id} value={tax.id}>
                       {tax.name} ({tax.rate}%)
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Moneda *
+                </label>
+                <select
+                  name="currency"
+                  value={formData.currency}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  <option value="">Seleccionar moneda</option>
+                  {currencies.map((currency) => (
+                    <option key={currency.id} value={currency.id}>
+                      {currency.name} ({currency.code})
                     </option>
                   ))}
                 </select>

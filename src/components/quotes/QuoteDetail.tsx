@@ -35,6 +35,8 @@ interface QuoteItem {
   line_number: number;
   assigned_to: number;
   assigned_to_name: string;
+  currency: number;
+  currency_code: string;
 }
 
 interface Product {
@@ -44,12 +46,22 @@ interface Product {
   pricing_method: string;
   base_price: string;
   price_per_m2: string;
+  currency: number;
+  currency_code: string;
+}
+
+interface Currency {
+  id: number;
+  code: string;
+  name: string;
+  symbol: string;
 }
 
 const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [loading, setLoading] = useState(true);
 
@@ -62,7 +74,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
     days: '1',
     unit_price: '0',
     discount_pct: '0',
-    description: ''
+    description: '',
+    currency: '1'
   });
 
   const [users, setUsers] = useState<any[]>([]);
@@ -73,6 +86,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
       await fetchItems();
       await fetchProducts();
       await fetchUsers();
+      await fetchCurrencies();
     };
     loadData();
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -136,6 +150,20 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
     }
   };
 
+  const fetchCurrencies = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/currencies/`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setCurrencies(data.results || data);
+      }
+    } catch (error) {
+      console.error('Error fetching currencies:', error);
+    }
+  };
+
   const handleProductSelect = (productId: string) => {
     const product = products.find(p => p.id.toString() === productId);
     if (product) {
@@ -144,7 +172,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
         ...newItem,
         product: productId,
         unit_price: price,
-        description: product.name
+        description: product.name,
+        currency: product.currency.toString()
       });
     }
   };
@@ -161,6 +190,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
       unit_price: parseFloat(newItem.unit_price),
       discount_pct: parseFloat(newItem.discount_pct),
       tax_rate: 21.00,
+      currency: parseInt(newItem.currency),
       description: newItem.type === 'SERVICIO' ? 
         `${newItem.service_type} - ${newItem.description}` : 
         newItem.description || '',
@@ -192,7 +222,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
           days: '1',
           unit_price: '0',
           discount_pct: '0',
-          description: ''
+          description: '',
+          currency: '1'
         });
         fetchItems();
         fetchQuote();
@@ -278,6 +309,27 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
     }
   };
 
+  const getStatusText = (status: string) => {
+    const texts = {
+      'DRAFT': 'Borrador',
+      'SENT': 'Enviado',
+      'EXPIRED': 'Cerrado Vencido',
+      'SOLD': 'Cerrado Vendido',
+      'REJECTED': 'Desestimado',
+    };
+    return texts[status as keyof typeof texts] || status;
+  };
+
+  const getPriorityText = (priority: string) => {
+    const texts = {
+      'LOW': 'Baja',
+      'MEDIUM': 'Media',
+      'HIGH': 'Alta',
+      'URGENT': 'Urgente',
+    };
+    return texts[priority as keyof typeof texts] || priority;
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -357,11 +409,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
               <div>
                 <span className="text-gray-500">Estado:</span>
-                <p className="font-medium">{quote.status}</p>
+                <p className="font-medium">{getStatusText(quote.status)}</p>
               </div>
               <div>
                 <span className="text-gray-500">Prioridad:</span>
-                <p className="font-medium">{quote.priority}</p>
+                <p className="font-medium">{getPriorityText(quote.priority)}</p>
               </div>
               <div>
                 <span className="text-gray-500">Válido hasta:</span>
@@ -386,6 +438,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moneda</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descuento</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
                     <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase">Acciones</th>
@@ -424,6 +477,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">{item.quantity}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">${parseFloat(item.unit_price).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{item.currency_code || 'USD'}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{item.discount_pct}%</td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">${parseFloat(item.total).toLocaleString()}</td>
                       <td className="px-6 py-4 text-right">
@@ -591,6 +645,22 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                     required
                   />
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Moneda</label>
+                <select
+                  value={newItem.currency}
+                  onChange={(e) => setNewItem({...newItem, currency: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  required
+                >
+                  {currencies.map((currency) => (
+                    <option key={currency.id} value={currency.id}>
+                      {currency.name} ({currency.code})
+                    </option>
+                  ))}
+                </select>
               </div>
 
               <div>

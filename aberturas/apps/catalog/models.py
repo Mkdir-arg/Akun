@@ -136,6 +136,7 @@ class Product(models.Model):
     height_mm = models.PositiveIntegerField(null=True, blank=True)
     weight_kg = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
     tax = models.ForeignKey(TaxRate, on_delete=models.PROTECT)
+    currency = models.ForeignKey('core.Currency', on_delete=models.PROTECT, default=1)
     pricing_method = models.CharField(max_length=10, choices=PRICING_METHOD_CHOICES, default='FIXED')
     base_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     price_per_m2 = models.DecimalField(max_digits=12, decimal_places=2, default=0)

@@ -13,6 +13,31 @@ from .serializers import (
 class ProductViewSet(viewsets.ModelViewSet):
     queryset = Product.objects.select_related('category', 'uom', 'tax').prefetch_related('pricelistrule_set')
     permission_classes = []  # Temporalmente sin permisos
+    
+    def create(self, request, *args, **kwargs):
+        # Si no hay SKU, generar uno automáticamente
+        if not request.data.get('sku'):
+            category_id = request.data.get('category')
+            if category_id:
+                try:
+                    category = ProductCategory.objects.get(id=category_id)
+                    prefix = category.code.upper()[:3]
+                    last_product = Product.objects.filter(sku__startswith=prefix).order_by('-id').first()
+                    
+                    if last_product:
+                        try:
+                            last_number = int(last_product.sku.split('-')[-1])
+                            new_number = last_number + 1
+                        except (ValueError, IndexError):
+                            new_number = 1
+                    else:
+                        new_number = 1
+                    
+                    request.data['sku'] = f"{prefix}-{new_number:03d}"
+                except ProductCategory.DoesNotExist:
+                    pass
+        
+        return super().create(request, *args, **kwargs)
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['sku', 'name', 'material', 'opening_type']
     ordering_fields = ['sku', 'name', 'base_price', 'price_per_m2']
@@ -62,6 +87,32 @@ class ProductViewSet(viewsets.ModelViewSet):
         product.is_active = False
         product.save()
         return Response({'status': 'Producto desactivado'})
+    
+    @action(detail=False, methods=['post'])
+    def generate_sku(self, request):
+        category_id = request.data.get('category_id')
+        if not category_id:
+            return Response({'error': 'category_id requerido'}, status=status.HTTP_400_BAD_REQUEST)
+        
+        try:
+            category = ProductCategory.objects.get(id=category_id)
+            prefix = category.code.upper()[:3]
+            last_product = Product.objects.filter(sku__startswith=prefix).order_by('-id').first()
+            
+            if last_product:
+                try:
+                    last_number = int(last_product.sku.split('-')[-1])
+                    new_number = last_number + 1
+                except (ValueError, IndexError):
+                    new_number = 1
+            else:
+                new_number = 1
+            
+            new_sku = f"{prefix}-{new_number:03d}"
+            return Response({'sku': new_sku})
+            
+        except ProductCategory.DoesNotExist:
+            return Response({'error': 'Categoría no encontrada'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=True, methods=['post'])
     def calculate_price(self, request, pk=None):

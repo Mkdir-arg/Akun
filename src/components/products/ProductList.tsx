@@ -184,11 +184,6 @@ const ProductList: React.FC = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{product.sku}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                      {product.is_service && (
-                        <span className="inline-flex px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800">
-                          Servicio
-                        </span>
-                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.category_name}</td>
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -196,7 +191,15 @@ const ProductList: React.FC = () => {
                         {product.material}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{product.opening_type}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        product.is_service 
+                          ? 'bg-indigo-100 text-indigo-800' 
+                          : 'bg-green-100 text-green-800'
+                      }`}>
+                        {product.is_service ? 'Servicio' : 'Producto'}
+                      </span>
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {product.pricing_method === 'FIXED' 
                         ? formatPrice(product.base_price, product.pricing_method)

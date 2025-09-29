@@ -1,12 +1,39 @@
 from django.core.management.base import BaseCommand
 from decimal import Decimal
 from apps.catalog.models import UoM, ProductCategory, TaxRate, PriceList, Product, PriceListRule
+from apps.core.models import Currency
 
 
 class Command(BaseCommand):
     help = 'Crea datos de prueba para el catálogo'
 
     def handle(self, *args, **options):
+        # Crear monedas
+        currencies_data = [
+            {
+                'code': 'USD',
+                'name': 'Dólar Estadounidense',
+                'symbol': '$',
+                'exchange_rate': Decimal('1.00'),
+                'is_default': True
+            },
+            {
+                'code': 'ARS',
+                'name': 'Peso Argentino',
+                'symbol': '$',
+                'exchange_rate': Decimal('350.00'),
+                'is_default': False
+            },
+        ]
+        
+        for currency_data in currencies_data:
+            currency, created = Currency.objects.get_or_create(
+                code=currency_data['code'],
+                defaults=currency_data
+            )
+            if created:
+                self.stdout.write(f'Moneda creada: {currency}')
+
         # Crear UoMs
         uoms_data = [
             {'code': 'UN', 'name': 'Unidad', 'category': 'unit'},

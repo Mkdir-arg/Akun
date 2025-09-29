@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Users, Shield, Settings as SettingsIcon } from 'lucide-react';
+import { Users, Shield, Settings as SettingsIcon, DollarSign } from 'lucide-react';
 import UserList from './UserList';
 import RoleList from './RoleList';
+import CurrencyList from './CurrencyList';
 
 const SettingsLayout: React.FC = () => {
   const [activeTab, setActiveTab] = useState('users');
@@ -9,6 +10,7 @@ const SettingsLayout: React.FC = () => {
   const tabs = [
     { id: 'users', label: 'Usuarios', icon: Users },
     { id: 'roles', label: 'Roles', icon: Shield },
+    { id: 'currencies', label: 'Monedas', icon: DollarSign },
   ];
 
   return (
@@ -49,6 +51,7 @@ const SettingsLayout: React.FC = () => {
         <div className="p-6">
           {activeTab === 'users' && <UserList />}
           {activeTab === 'roles' && <RoleList />}
+          {activeTab === 'currencies' && <CurrencyList />}
         </div>
       </main>
     </>
