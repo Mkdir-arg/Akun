@@ -44,9 +44,13 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }
       {/* Sidebar */}
       <div className="w-64 bg-white shadow-lg flex flex-col">
         {/* Logo */}
-        <div className="p-6 border-b">
-          <h1 className="text-xl font-bold text-gray-900">AKUN</h1>
-          <p className="text-sm text-gray-600">Sistema de Aberturas</p>
+        <div className="p-6 border-b text-center">
+          <img 
+            src="/AKUN-LOGO.webp" 
+            alt="AKUN Logo" 
+            className="h-12 w-auto mx-auto mb-2"
+          />
+          <p className="text-sm text-gray-600">Sistema de Gestión</p>
         </div>
         
         {/* Navigation */}

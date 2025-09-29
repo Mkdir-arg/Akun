@@ -17,6 +17,8 @@ LOGGING['root']['level'] = 'DEBUG'
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3001',
     'http://127.0.0.1:3001',
+    'https://z5906h8z-3001.brs.devtunnels.ms',
+    'https://z5906h8z-8002.brs.devtunnels.ms',
 ]
 
 # Disable secure cookies for development

@@ -46,6 +46,7 @@ interface Product {
   pricing_method: string;
   base_price: string;
   price_per_m2: string;
+  tax_rate: string;
   currency: number;
   currency_code: string;
 }
@@ -61,6 +62,8 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
   const [quote, setQuote] = useState<Quote | null>(null);
   const [items, setItems] = useState<QuoteItem[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [filteredProducts, setFilteredProducts] = useState<Product[]>([]);
+  const [showProductList, setShowProductList] = useState(false);
   const [currencies, setCurrencies] = useState<Currency[]>([]);
   const [showAddProduct, setShowAddProduct] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -130,7 +133,9 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
       });
       if (response.ok) {
         const data = await response.json();
-        setProducts(data.results || data);
+        const productList = data.results || data;
+        setProducts(productList);
+        setFilteredProducts(productList);
       }
     } catch (error) {
       console.error('Error fetching products:', error);
@@ -556,19 +561,45 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
               {newItem.type === 'PRODUCTO' && (
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">Producto</label>
-                  <select
-                    value={newItem.product}
-                    onChange={(e) => handleProductSelect(e.target.value)}
+                  <input
+                    type="text"
+                    placeholder="Buscar producto por nombre o SKU..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  >
-                    <option value="">Seleccionar producto</option>
-                    {products.map((product) => (
-                      <option key={product.id} value={product.id}>
-                        {product.name} - {product.sku}
-                      </option>
-                    ))}
-                  </select>
+                    onFocus={() => {
+                      setFilteredProducts(products);
+                      setShowProductList(true);
+                    }}
+                    onChange={(e) => {
+                      const searchTerm = e.target.value.toLowerCase();
+                      const filtered = products.filter(p => 
+                        p.name.toLowerCase().includes(searchTerm) || 
+                        p.sku.toLowerCase().includes(searchTerm)
+                      );
+                      setFilteredProducts(filtered);
+                      setShowProductList(true);
+                    }}
+                    onBlur={() => setTimeout(() => setShowProductList(false), 200)}
+                  />
+                  {showProductList && (
+                    <div className="mt-1 max-h-40 overflow-y-auto border border-gray-300 rounded-md bg-white shadow-lg">
+                      {filteredProducts.map((product) => (
+                        <div
+                          key={product.id}
+                          onClick={() => {
+                            handleProductSelect(product.id.toString());
+                            setShowProductList(false);
+                          }}
+                          className="px-3 py-2 hover:bg-gray-100 cursor-pointer border-b last:border-b-0"
+                        >
+                          <div className="font-medium">{product.name}</div>
+                          <div className="text-sm text-gray-500">{product.sku}</div>
+                        </div>
+                      ))}
+                      {filteredProducts.length === 0 && (
+                        <div className="px-3 py-2 text-gray-500 text-sm">No se encontraron productos</div>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
 
