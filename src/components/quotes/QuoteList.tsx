@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Plus, Search, Filter, Eye, Edit, FileText } from 'lucide-react';
+import { Plus, Search, Filter, Eye, Edit, FileText, Send, X, CheckCircle } from 'lucide-react';
 
 interface Quote {
   id: number;
@@ -28,12 +28,97 @@ const QuoteList: React.FC = () => {
       });
       if (response.ok) {
         const data = await response.json();
-        setQuotes(data.results || data);
+        const quotesWithStatus = await Promise.all((data.results || data).map(async (quote: Quote) => {
+          // Verificar si el presupuesto está vencido
+          if (quote.valid_until && new Date(quote.valid_until) < new Date() && quote.status !== 'SOLD' && quote.status !== 'EXPIRED') {
+            // Actualizar en la base de datos
+            try {
+              await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quote.id}/`, {
+                method: 'PATCH',
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify({ status: 'EXPIRED' })
+              });
+            } catch (error) {
+              console.error('Error updating expired quote:', error);
+            }
+            return { ...quote, status: 'EXPIRED' };
+          }
+          return quote;
+        }));
+        setQuotes(quotesWithStatus);
       }
     } catch (error) {
       console.error('Error fetching quotes:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleConvertToSale = async (quote: Quote) => {
+    if (window.confirm(`¿Estás seguro de convertir el presupuesto ${quote.number} a venta?`)) {
+      try {
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quote.id}/`, {
+          method: 'PATCH',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          credentials: 'include',
+          body: JSON.stringify({
+            status: 'SOLD'
+          })
+        });
+        
+        if (response.ok) {
+          alert('Presupuesto convertido a venta exitosamente');
+          fetchQuotes();
+        } else {
+          alert('Error al convertir el presupuesto a venta');
+        }
+      } catch (error) {
+        console.error('Error converting to sale:', error);
+        alert('Error al convertir el presupuesto a venta');
+      }
+    }
+  };
+
+  const handleSendQuote = async (quote: Quote) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quote.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'SENT' })
+      });
+
+      if (response.ok) {
+        fetchQuotes();
+        alert('Presupuesto enviado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error sending quote:', error);
+    }
+  };
+
+  const handleMarkAsRejected = async (quote: Quote) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quote.id}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'REJECTED' })
+      });
+
+      if (response.ok) {
+        fetchQuotes();
+        alert('Presupuesto marcado como desestimado');
+      }
+    } catch (error) {
+      console.error('Error marking as rejected:', error);
     }
   };
 
@@ -359,10 +444,9 @@ const QuoteList: React.FC = () => {
     const colors = {
       'DRAFT': 'bg-gray-100 text-gray-800',
       'SENT': 'bg-blue-100 text-blue-800',
-      'APPROVED': 'bg-green-100 text-green-800',
-      'REJECTED': 'bg-red-100 text-red-800',
       'EXPIRED': 'bg-yellow-100 text-yellow-800',
-      'CONVERTED': 'bg-purple-100 text-purple-800',
+      'SOLD': 'bg-green-100 text-green-800',
+      'REJECTED': 'bg-red-100 text-red-800',
     };
     return colors[status as keyof typeof colors] || 'bg-gray-100 text-gray-800';
   };
@@ -371,10 +455,9 @@ const QuoteList: React.FC = () => {
     const texts = {
       'DRAFT': 'Borrador',
       'SENT': 'Enviado',
-      'APPROVED': 'Aprobado',
-      'REJECTED': 'Rechazado',
-      'EXPIRED': 'Vencido',
-      'CONVERTED': 'Convertido',
+      'EXPIRED': 'Cerrado Vencido',
+      'SOLD': 'Cerrado Vendido',
+      'REJECTED': 'Desestimado',
     };
     return texts[status as keyof typeof texts] || status;
   };
@@ -486,13 +569,15 @@ const QuoteList: React.FC = () => {
                           >
                             <Eye className="w-4 h-4" />
                           </button>
-                          <button
-                            onClick={() => window.location.hash = `/presupuestos/${quote.id}/editar`}
-                            className="text-green-600 hover:text-green-900"
-                            title="Editar"
-                          >
-                            <Edit className="w-4 h-4" />
-                          </button>
+                          {quote.status !== 'EXPIRED' && (
+                            <button
+                              onClick={() => window.location.hash = `/presupuestos/${quote.id}/editar`}
+                              className="text-green-600 hover:text-green-900"
+                              title="Editar"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             onClick={() => handleGeneratePDF(quote)}
                             className="text-purple-600 hover:text-purple-900"
@@ -500,6 +585,42 @@ const QuoteList: React.FC = () => {
                           >
                             <FileText className="w-4 h-4" />
                           </button>
+                          {quote.status === 'DRAFT' && (
+                            <>
+                              <button
+                                onClick={() => handleSendQuote(quote)}
+                                className="text-green-600 hover:text-green-900"
+                                title="Enviar"
+                              >
+                                <Send className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleMarkAsRejected(quote)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Desestimado"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
+                          {quote.status === 'SENT' && (
+                            <>
+                              <button
+                                onClick={() => handleConvertToSale(quote)}
+                                className="text-blue-600 hover:text-blue-900"
+                                title="Cerrado Vendido"
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleMarkAsRejected(quote)}
+                                className="text-red-600 hover:text-red-900"
+                                title="Desestimado"
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </>
+                          )}
                         </div>
                       </td>
                     </tr>

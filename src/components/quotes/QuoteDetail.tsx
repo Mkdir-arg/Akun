@@ -67,7 +67,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
 
   const [users, setUsers] = useState<any[]>([]);
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const loadData = async () => {
       await fetchQuote();
@@ -76,6 +75,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
       await fetchUsers();
     };
     loadData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [quoteId]);
 
   const fetchQuote = async () => {
@@ -218,6 +218,66 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
     }
   };
 
+  const handleSendQuote = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quoteId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'SENT' })
+      });
+
+      if (response.ok) {
+        fetchQuote();
+        alert('Presupuesto enviado exitosamente');
+      }
+    } catch (error) {
+      console.error('Error sending quote:', error);
+    }
+  };
+
+  const handleMarkAsSold = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quoteId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'SOLD' })
+      });
+
+      if (response.ok) {
+        fetchQuote();
+        alert('Presupuesto marcado como vendido');
+      }
+    } catch (error) {
+      console.error('Error marking as sold:', error);
+    }
+  };
+
+  const handleMarkAsRejected = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quoteId}/`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({ status: 'REJECTED' })
+      });
+
+      if (response.ok) {
+        fetchQuote();
+        alert('Presupuesto marcado como desestimado');
+      }
+    } catch (error) {
+      console.error('Error marking as rejected:', error);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -245,13 +305,47 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
           </div>
           <div className="flex gap-3">
             <PDFGenerator quote={quote} items={items} />
-            <button
-              onClick={() => setShowAddProduct(true)}
-              className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-            >
-              <Plus className="w-4 h-4 mr-2" />
-              Agregar Producto
-            </button>
+            {quote.status === 'DRAFT' && (
+              <>
+                <button
+                  onClick={() => handleSendQuote()}
+                  className="flex items-center px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
+                >
+                  Enviar
+                </button>
+                <button
+                  onClick={() => handleMarkAsRejected()}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Desestimado
+                </button>
+              </>
+            )}
+            {quote.status === 'SENT' && (
+              <>
+                <button
+                  onClick={() => handleMarkAsSold()}
+                  className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                >
+                  Cerrado Vendido
+                </button>
+                <button
+                  onClick={() => handleMarkAsRejected()}
+                  className="flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
+                >
+                  Desestimado
+                </button>
+              </>
+            )}
+            {quote.status === 'DRAFT' && (
+              <button
+                onClick={() => setShowAddProduct(true)}
+                className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Agregar Producto
+              </button>
+            )}
           </div>
         </div>
       </header>
@@ -333,12 +427,14 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                       <td className="px-6 py-4 text-sm text-gray-900">{item.discount_pct}%</td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">${parseFloat(item.total).toLocaleString()}</td>
                       <td className="px-6 py-4 text-right">
-                        <button
-                          onClick={() => handleDeleteItem(item.id)}
-                          className="text-red-600 hover:text-red-900"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
+                        {quote.status === 'DRAFT' && (
+                          <button
+                            onClick={() => handleDeleteItem(item.id)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        )}
                       </td>
                     </tr>
                   ))}
