@@ -271,21 +271,18 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
 
   const handleMarkAsSold = async () => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quoteId}/`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        credentials: 'include',
-        body: JSON.stringify({ status: 'SOLD' })
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quotes/${quoteId}/convert_to_order/`, {
+        method: 'POST',
+        credentials: 'include'
       });
 
       if (response.ok) {
+        const data = await response.json();
         fetchQuote();
-        alert('Presupuesto marcado como vendido');
+        alert(`Presupuesto convertido a venta. Pedido ${data.order_number} creado.`);
       }
     } catch (error) {
-      console.error('Error marking as sold:', error);
+      console.error('Error converting to sale:', error);
     }
   };
 

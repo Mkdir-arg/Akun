@@ -18,6 +18,18 @@ class QuoteViewSet(viewsets.ModelViewSet):
     ordering_fields = ['number', 'created_at', 'valid_until', 'total']
     ordering = ['-created_at']
     
+    def update(self, request, *args, **kwargs):
+        print(f"DEBUG PATCH - Request data: {request.data}")
+        partial = kwargs.pop('partial', False)
+        instance = self.get_object()
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        print(f"DEBUG PATCH - Serializer is_valid: {serializer.is_valid()}")
+        if not serializer.is_valid():
+            print(f"DEBUG PATCH - Serializer errors: {serializer.errors}")
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        self.perform_update(serializer)
+        return Response(serializer.data)
+    
     def get_serializer_class(self):
         if self.action == 'retrieve':
             return QuoteDetailSerializer
@@ -65,18 +77,21 @@ class QuoteViewSet(viewsets.ModelViewSet):
     def convert_to_order(self, request, pk=None):
         """Convertir presupuesto a pedido"""
         quote = self.get_object()
+        print(f"DEBUG - Converting quote {quote.id} to order")
         
         try:
             order = Order.create_from_quote(
                 quote=quote,
                 created_by=request.user if request.user.is_authenticated else None
             )
+            print(f"DEBUG - Order created: {order.id} - {order.number}")
             return Response({
                 'message': 'Presupuesto convertido a pedido exitosamente',
                 'order_id': order.id,
                 'order_number': order.number
             })
         except Exception as e:
+            print(f"DEBUG - Error creating order: {e}")
             return Response(
                 {'error': str(e)},
                 status=status.HTTP_400_BAD_REQUEST

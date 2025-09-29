@@ -13,6 +13,7 @@ class Quote(models.Model):
         ('APPROVED', 'Aprobado'),
         ('REJECTED', 'Rechazado'),
         ('EXPIRED', 'Vencido'),
+        ('SOLD', 'Cerrado Vendido'),
         ('CONVERTED', 'Convertido a Venta'),
     ]
     
@@ -88,7 +89,7 @@ class Quote(models.Model):
     
     def can_convert_to_order(self):
         """Verificar si se puede convertir a pedido"""
-        return self.status == 'APPROVED'
+        return self.status in ['SENT', 'APPROVED']
     
     def __str__(self):
         return f"{self.number} - {self.customer.name}"
@@ -276,8 +277,8 @@ class Order(models.Model):
                 line_number=quote_item.line_number,
             )
         
-        # Marcar presupuesto como convertido
-        quote.status = 'CONVERTED'
+        # Marcar presupuesto como vendido
+        quote.status = 'SOLD'
         quote.save()
         
         return order
