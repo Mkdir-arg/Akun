@@ -14,12 +14,24 @@ from .serializers import (
 
 
 class ClienteViewSet(viewsets.ModelViewSet):
-    queryset = Cliente.objects.select_related('default_price_list', 'payment_terms').prefetch_related('tags')
+    queryset = Cliente.objects.select_related('etiqueta')
     permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'code', 'tax_id', 'email', 'phone']
+    search_fields = ['name', 'code', 'tax_id', 'email', 'phone', 'calle', 'localidad', 'provincia']
     ordering_fields = ['name', 'created_at', 'updated_at']
     ordering = ['name']
+    
+    def get_queryset(self):
+        queryset = super().get_queryset()
+        direccion = self.request.query_params.get('direccion', None)
+        if direccion:
+            queryset = queryset.filter(
+                Q(calle__icontains=direccion) |
+                Q(localidad__icontains=direccion) |
+                Q(provincia__icontains=direccion) |
+                Q(municipio__icontains=direccion)
+            )
+        return queryset
     
     def get_serializer_class(self):
         if self.action == 'retrieve':

@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Save } from 'lucide-react';
+import GeographicInputs from '../common/GeographicInputs';
 
 interface CustomerFormProps {
   onBack: () => void;
@@ -13,10 +14,36 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onBack, onSave }) => {
     tax_id: '',
     email: '',
     phone: '',
-    credit_limit: '0',
+    provincia: '',
+    municipio: '',
+    localidad: '',
+    calle: '',
+    numero: '',
+    codigo_postal: '',
+    etiqueta: '',
     status: 'ACTIVO',
     notes: ''
   });
+
+  const [etiquetas, setEtiquetas] = useState<any[]>([]);
+
+  useEffect(() => {
+    fetchEtiquetas();
+  }, []);
+
+  const fetchEtiquetas = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/customer-tags/`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEtiquetas(data.results || data);
+      }
+    } catch (error) {
+      console.error('Error fetching etiquetas:', error);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -155,15 +182,72 @@ const CustomerForm: React.FC<CustomerFormProps> = ({ onBack, onSave }) => {
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Límite de Crédito
+                  Etiqueta
+                </label>
+                <select
+                  name="etiqueta"
+                  value={formData.etiqueta}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sin etiqueta</option>
+                  {etiquetas.map((etiqueta) => (
+                    <option key={etiqueta.id} value={etiqueta.id}>
+                      {etiqueta.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div className="md:col-span-2 grid grid-cols-1 md:grid-cols-3 gap-6">
+                <GeographicInputs
+                  provincia={formData.provincia}
+                  municipio={formData.municipio}
+                  localidad={formData.localidad}
+                  onProvinciaChange={(value) => {
+                  console.log('CustomerForm updating provincia to:', value);
+                  setFormData(prev => ({...prev, provincia: value}));
+                }}
+                  onMunicipioChange={(value) => setFormData(prev => ({...prev, municipio: value}))}
+                  onLocalidadChange={(value) => setFormData(prev => ({...prev, localidad: value}))}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Calle
                 </label>
                 <input
-                  type="number"
-                  name="credit_limit"
-                  value={formData.credit_limit}
+                  type="text"
+                  name="calle"
+                  value={formData.calle}
                   onChange={handleChange}
-                  min="0"
-                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número
+                </label>
+                <input
+                  type="text"
+                  name="numero"
+                  value={formData.numero}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código Postal
+                </label>
+                <input
+                  type="text"
+                  name="codigo_postal"
+                  value={formData.codigo_postal}
+                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

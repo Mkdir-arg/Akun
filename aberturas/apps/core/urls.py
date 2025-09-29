@@ -1,10 +1,10 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
-from .views import MonedaViewSet
+from django.urls import path
+from . import views
 
-router = DefaultRouter()
-router.register(r'currencies', MonedaViewSet)
+app_name = 'core'
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('api/provincias/', views.provincias_list, name='provincias_list'),
+    path('api/municipios/', views.municipios_list, name='municipios_list'),
+    path('api/localidades/', views.localidades_list, name='localidades_list'),
 ]

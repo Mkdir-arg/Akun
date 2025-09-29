@@ -22,21 +22,17 @@ class Cliente(models.Model):
     tax_id = models.CharField(max_length=20, null=True, blank=True, unique=True)
     email = models.EmailField(null=True, blank=True)
     phone = models.CharField(max_length=40, null=True, blank=True)
-    default_price_list = models.ForeignKey(
-        'catalog.ListaPrecios', 
-        on_delete=models.SET_NULL, 
-        null=True, 
-        blank=True
-    )
-    payment_terms = models.ForeignKey(
-        'TerminoPago',
-        on_delete=models.SET_NULL,
-        null=True,
-        blank=True
-    )
-    credit_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+
+    # Geolocalización
+    provincia = models.CharField(max_length=100, blank=True)
+    localidad = models.CharField(max_length=100, blank=True)
+    municipio = models.CharField(max_length=100, blank=True)
+    calle = models.CharField(max_length=200, blank=True)
+    numero = models.CharField(max_length=20, blank=True)
+    codigo_postal = models.CharField(max_length=20, blank=True)
+    
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ACTIVO')
-    tags = models.ManyToManyField('EtiquetaCliente', blank=True)
+    etiqueta = models.ForeignKey('EtiquetaCliente', on_delete=models.SET_NULL, null=True, blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
@@ -92,6 +88,22 @@ class Cliente(models.Model):
             self.is_active = True
             
         super().save(*args, **kwargs)
+    
+    @property
+    def direccion_completa(self):
+        """Retorna la dirección completa concatenada"""
+        parts = []
+        if self.calle:
+            parts.append(self.calle)
+        if self.numero:
+            parts.append(self.numero)
+        if self.localidad:
+            parts.append(self.localidad)
+        if self.provincia:
+            parts.append(self.provincia)
+        if self.codigo_postal:
+            parts.append(f"({self.codigo_postal})")
+        return ", ".join(parts) if parts else ""
         
     def __str__(self):
         return f"{self.code} - {self.name}"

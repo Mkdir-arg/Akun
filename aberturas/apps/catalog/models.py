@@ -42,6 +42,22 @@ class CategoriaProducto(models.Model):
         return self.name
 
 
+class SubcategoriaProducto(models.Model):
+    category = models.ForeignKey(CategoriaProducto, on_delete=models.CASCADE, related_name='subcategories')
+    name = models.CharField(max_length=100)
+    code = models.SlugField()
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Subcategoría de Producto'
+        verbose_name_plural = 'Subcategorías de Producto'
+        unique_together = ('category', 'code')
+        
+    def __str__(self):
+        return f"{self.category.name} - {self.name}"
+
+
 class TasaImpuesto(models.Model):
     name = models.CharField(max_length=50)
     rate = models.DecimalField(max_digits=5, decimal_places=2)

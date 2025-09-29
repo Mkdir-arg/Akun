@@ -14,15 +14,37 @@ const CustomerEdit: React.FC<CustomerEditProps> = ({ customerId, onBack, onSave 
     tax_id: '',
     email: '',
     phone: '',
-    credit_limit: '0',
+    provincia: '',
+    localidad: '',
+    municipio: '',
+    calle: '',
+    numero: '',
+    codigo_postal: '',
+    etiqueta: '',
     status: 'ACTIVO',
     notes: ''
   });
+  const [etiquetas, setEtiquetas] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     fetchCustomer();
+    fetchEtiquetas();
   }, [customerId]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchEtiquetas = async () => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/customer-tags/`, {
+        credentials: 'include'
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setEtiquetas(data.results || data);
+      }
+    } catch (error) {
+      console.error('Error fetching etiquetas:', error);
+    }
+  };
 
   const fetchCustomer = async () => {
     try {
@@ -37,7 +59,13 @@ const CustomerEdit: React.FC<CustomerEditProps> = ({ customerId, onBack, onSave 
           tax_id: customer.tax_id || '',
           email: customer.email || '',
           phone: customer.phone || '',
-          credit_limit: customer.credit_limit,
+          provincia: customer.provincia || '',
+          localidad: customer.localidad || '',
+          municipio: customer.municipio || '',
+          calle: customer.calle || '',
+          numero: customer.numero || '',
+          codigo_postal: customer.codigo_postal || '',
+          etiqueta: customer.etiqueta || '',
           status: customer.status,
           notes: customer.notes || ''
         });
@@ -190,15 +218,97 @@ const CustomerEdit: React.FC<CustomerEditProps> = ({ customerId, onBack, onSave 
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Límite de Crédito
+                  Etiqueta
+                </label>
+                <select
+                  name="etiqueta"
+                  value={formData.etiqueta}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Sin etiqueta</option>
+                  {etiquetas.map((etiqueta) => (
+                    <option key={etiqueta.id} value={etiqueta.id}>
+                      {etiqueta.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Provincia
                 </label>
                 <input
-                  type="number"
-                  name="credit_limit"
-                  value={formData.credit_limit}
+                  type="text"
+                  name="provincia"
+                  value={formData.provincia}
                   onChange={handleChange}
-                  min="0"
-                  step="0.01"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Localidad
+                </label>
+                <input
+                  type="text"
+                  name="localidad"
+                  value={formData.localidad}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Municipio
+                </label>
+                <input
+                  type="text"
+                  name="municipio"
+                  value={formData.municipio}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Calle
+                </label>
+                <input
+                  type="text"
+                  name="calle"
+                  value={formData.calle}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Número
+                </label>
+                <input
+                  type="text"
+                  name="numero"
+                  value={formData.numero}
+                  onChange={handleChange}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Código Postal
+                </label>
+                <input
+                  type="text"
+                  name="codigo_postal"
+                  value={formData.codigo_postal}
+                  onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                 />
               </div>

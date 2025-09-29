@@ -10,14 +10,10 @@ interface Customer {
   email: string;
   phone: string;
   status: 'ACTIVO' | 'INACTIVO' | 'POTENCIAL';
-  credit_limit: string;
+  direccion_completa: string;
   created_at: string;
   updated_at: string;
-  tags: Array<{
-    id: number;
-    name: string;
-    color: string;
-  }>;
+  etiqueta_name?: string;
 }
 
 const CustomerList: React.FC = () => {
@@ -25,18 +21,20 @@ const CustomerList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
+
+  const [direccionFilter, setDireccionFilter] = useState('');
 
   useEffect(() => {
     fetchCustomers();
-  }, [searchTerm, statusFilter, typeFilter]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [searchTerm, statusFilter, direccionFilter]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const fetchCustomers = async () => {
     try {
       const params = new URLSearchParams();
       if (searchTerm) params.append('search', searchTerm);
       if (statusFilter) params.append('status', statusFilter);
-      if (typeFilter) params.append('type', typeFilter);
+
+      if (direccionFilter) params.append('direccion', direccionFilter);
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/api/customers/?${params}`, {
         credentials: 'include'
@@ -62,9 +60,7 @@ const CustomerList: React.FC = () => {
     return badges[status as keyof typeof badges] || 'bg-gray-100 text-gray-800';
   };
 
-  const getTypeBadge = (type: string) => {
-    return type === 'EMPRESA' ? 'bg-purple-100 text-purple-800' : 'bg-orange-100 text-orange-800';
-  };
+
 
   if (loading) {
     return (
@@ -131,15 +127,13 @@ const CustomerList: React.FC = () => {
               <option value="POTENCIAL">Potencial</option>
             </select>
 
-            <select
+            <input
+              type="text"
+              placeholder="Filtrar por dirección..."
               className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value)}
-            >
-              <option value="">Todos los tipos</option>
-              <option value="EMPRESA">Empresa</option>
-              <option value="PERSONA">Persona</option>
-            </select>
+              value={direccionFilter}
+              onChange={(e) => setDireccionFilter(e.target.value)}
+            />
 
             <button className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
               <Filter className="w-4 h-4 mr-2" />
@@ -157,11 +151,9 @@ const CustomerList: React.FC = () => {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Código</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nombre</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tipo</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">CUIT/DNI</th>
+                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dirección</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etiquetas</th>
                 <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
               </tr>
             </thead>
@@ -171,45 +163,36 @@ const CustomerList: React.FC = () => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{customer.code}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{customer.name}</div>
+                    {customer.etiqueta_name && (
+                      <div className="text-xs text-blue-600">{customer.etiqueta_name}</div>
+                    )}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getTypeBadge(customer.type)}`}>
-                      {customer.type}
-                    </span>
+                  <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                    {customer.direccion_completa || '-'}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-mono text-gray-900">{customer.tax_id || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{customer.email || '-'}</td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(customer.status)}`}>
                       {customer.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex flex-wrap gap-1">
-                      {customer.tags.map((tag) => (
-                        <span
-                          key={tag.id}
-                          className="inline-flex px-2 py-1 text-xs font-semibold rounded-full text-white"
-                          style={{ backgroundColor: tag.color }}
-                        >
-                          {tag.name}
-                        </span>
-                      ))}
-                    </div>
-                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     <div className="flex gap-2">
+                      <button 
+                        onClick={() => {
+                          if (window.confirm('¿Estás seguro de que quieres editar este cliente?')) {
+                            window.location.hash = `/clientes/${customer.id}/editar`;
+                          }
+                        }}
+                        className="text-indigo-600 hover:text-indigo-900"
+                      >
+                        Editar
+                      </button>
                       <button 
                         onClick={() => window.location.hash = `/clientes/${customer.id}`}
                         className="text-blue-600 hover:text-blue-900"
                       >
                         Ver
-                      </button>
-                      <button 
-                        onClick={() => window.location.hash = `/clientes/${customer.id}/editar`}
-                        className="text-indigo-600 hover:text-indigo-900"
-                      >
-                        Editar
                       </button>
                     </div>
                   </td>

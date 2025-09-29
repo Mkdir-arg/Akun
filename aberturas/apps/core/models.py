@@ -30,3 +30,49 @@ class Moneda(models.Model):
         if self.is_default:
             Moneda.objects.filter(is_default=True).update(is_default=False)
         super().save(*args, **kwargs)
+
+
+class Provincia(models.Model):
+    nombre = models.CharField(max_length=100, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Provincia"
+        verbose_name_plural = "Provincias"
+        ordering = ['nombre']
+
+    def __str__(self):
+        return self.nombre
+
+
+class Municipio(models.Model):
+    nombre = models.CharField(max_length=100)
+    provincia = models.ForeignKey(Provincia, on_delete=models.CASCADE, related_name='municipios')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Municipio"
+        verbose_name_plural = "Municipios"
+        ordering = ['nombre']
+        unique_together = ['nombre', 'provincia']
+
+    def __str__(self):
+        return f"{self.nombre}, {self.provincia.nombre}"
+
+
+class Localidad(models.Model):
+    nombre = models.CharField(max_length=100)
+    municipio = models.ForeignKey(Municipio, on_delete=models.CASCADE, related_name='localidades')
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = "Localidad"
+        verbose_name_plural = "Localidades"
+        ordering = ['nombre']
+        unique_together = ['nombre', 'municipio']
+
+    def __str__(self):
+        return f"{self.nombre}, {self.municipio.nombre}"

@@ -1,0 +1,266 @@
+[
+  {
+    "model": "core.moneda",
+    "pk": 1,
+    "fields": {
+      "code": "USD",
+      "name": "Dólar Estadounidense",
+      "symbol": "$",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "core.moneda",
+    "pk": 2,
+    "fields": {
+      "code": "ARS",
+      "name": "Peso Argentino",
+      "symbol": "$",
+      "is_default": true,
+      "is_active": true
+    }
+  },
+  {
+    "model": "accounts.role",
+    "pk": 1,
+    "fields": {
+      "name": "Administrador",
+      "description": "Acceso completo al sistema"
+    }
+  },
+  {
+    "model": "accounts.role",
+    "pk": 2,
+    "fields": {
+      "name": "Vendedor",
+      "description": "Gestión de ventas y presupuestos"
+    }
+  },
+  {
+    "model": "accounts.role",
+    "pk": 3,
+    "fields": {
+      "name": "Operador",
+      "description": "Operaciones básicas del sistema"
+    }
+  },
+  {
+    "model": "accounts.role",
+    "pk": 4,
+    "fields": {
+      "name": "Consulta",
+      "description": "Solo lectura del sistema"
+    }
+  },
+  {
+    "model": "accounts.role",
+    "pk": 5,
+    "fields": {
+      "name": "Colocadores",
+      "description": "Personal encargado de la colocación e instalación"
+    }
+  },
+  {
+    "model": "catalog.unidadmedida",
+    "pk": 1,
+    "fields": {
+      "code": "UN",
+      "name": "Unidad",
+      "symbol": "UN",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.unidadmedida",
+    "pk": 2,
+    "fields": {
+      "code": "M2",
+      "name": "Metro Cuadrado",
+      "symbol": "M²",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.unidadmedida",
+    "pk": 3,
+    "fields": {
+      "code": "ML",
+      "name": "Metro Lineal",
+      "symbol": "ML",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.unidadmedida",
+    "pk": 4,
+    "fields": {
+      "code": "KG",
+      "name": "Kilogramo",
+      "symbol": "KG",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.categoriaproducto",
+    "pk": 1,
+    "fields": {
+      "name": "Ventanas",
+      "description": "Ventanas de diferentes materiales y tipos",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.categoriaproducto",
+    "pk": 2,
+    "fields": {
+      "name": "Puertas",
+      "description": "Puertas de acceso y balcón",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.categoriaproducto",
+    "pk": 3,
+    "fields": {
+      "name": "Cerramientos",
+      "description": "Cerramientos de balcones y terrazas",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.categoriaproducto",
+    "pk": 4,
+    "fields": {
+      "name": "Accesorios",
+      "description": "Accesorios y herrajes",
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.tasaimpuesto",
+    "pk": 1,
+    "fields": {
+      "name": "IVA 21%",
+      "rate": "21.00",
+      "is_default": true,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.tasaimpuesto",
+    "pk": 2,
+    "fields": {
+      "name": "IVA 10.5%",
+      "rate": "10.50",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.tasaimpuesto",
+    "pk": 3,
+    "fields": {
+      "name": "Exento",
+      "rate": "0.00",
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "catalog.listaprecios",
+    "pk": 1,
+    "fields": {
+      "name": "Lista General",
+      "description": "Lista de precios general",
+      "currency": 2,
+      "is_default": true,
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.terminopago",
+    "pk": 1,
+    "fields": {
+      "name": "Contado",
+      "days": 0,
+      "is_default": true,
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.terminopago",
+    "pk": 2,
+    "fields": {
+      "name": "15 días",
+      "days": 15,
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.terminopago",
+    "pk": 3,
+    "fields": {
+      "name": "30 días",
+      "days": 30,
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.terminopago",
+    "pk": 4,
+    "fields": {
+      "name": "60 días",
+      "days": 60,
+      "is_default": false,
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.etiquetacliente",
+    "pk": 1,
+    "fields": {
+      "name": "Mayorista",
+      "color": "#3B82F6",
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.etiquetacliente",
+    "pk": 2,
+    "fields": {
+      "name": "Obra",
+      "color": "#10B981",
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.etiquetacliente",
+    "pk": 3,
+    "fields": {
+      "name": "Premium",
+      "color": "#F59E0B",
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.etiquetacliente",
+    "pk": 4,
+    "fields": {
+      "name": "Moroso",
+      "color": "#EF4444",
+      "is_active": true
+    }
+  },
+  {
+    "model": "crm.etiquetacliente",
+    "pk": 5,
+    "fields": {
+      "name": "VIP",
+      "color": "#8B5CF6",
+      "is_active": true
+    }
+  }
+]

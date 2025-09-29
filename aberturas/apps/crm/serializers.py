@@ -96,22 +96,16 @@ class ArchivoClienteSerializer(serializers.ModelSerializer):
 
 
 class ClienteSerializer(serializers.ModelSerializer):
-    tags = EtiquetaClienteSerializer(many=True, read_only=True)
-    default_price_list_name = serializers.CharField(source='default_price_list.name', read_only=True)
-    payment_terms_name = serializers.CharField(source='payment_terms.name', read_only=True)
+    etiqueta_name = serializers.CharField(source='etiqueta.name', read_only=True)
+    direccion_completa = serializers.ReadOnlyField()
     
     class Meta:
         model = Cliente
         fields = ['id', 'code', 'type', 'name', 'tax_id', 'email', 'phone',
-                 'default_price_list', 'default_price_list_name', 'payment_terms', 
-                 'payment_terms_name', 'credit_limit', 'status', 'tags', 'notes',
-                 'is_active', 'created_at', 'updated_at']
+                 'provincia', 'localidad', 'municipio', 'calle', 'numero', 'codigo_postal',
+                 'direccion_completa', 'status', 'etiqueta', 'etiqueta_name',
+                 'notes', 'is_active', 'created_at', 'updated_at']
         read_only_fields = ['code']
-        
-    def validate_credit_limit(self, value):
-        if value < 0:
-            raise serializers.ValidationError('El límite de crédito no puede ser negativo.')
-        return value
 
 
 class ClienteDetailSerializer(ClienteSerializer):

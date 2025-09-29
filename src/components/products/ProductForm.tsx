@@ -215,12 +215,16 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
   
   const fetchSubcategories = async (categoryId: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/categories/${categoryId}/subcategories/`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/subcategories/?category=${categoryId}`, {
         credentials: 'include'
       });
       if (response.ok) {
         const data = await response.json();
-        setSubcategories(data.subcategories || []);
+        const subcats = (data.results || data).map((sub: any) => ({
+          value: sub.id.toString(),
+          label: sub.name
+        }));
+        setSubcategories(subcats);
       }
     } catch (error) {
       console.error('Error fetching subcategories:', error);
@@ -230,7 +234,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
 
   const generateSKU = async (categoryId: string) => {
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/products/generate-sku/`, {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/categories/generate-sku/`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

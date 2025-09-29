@@ -7,6 +7,7 @@ import CustomerDetail from './components/customers/CustomerDetail';
 import CustomerEdit from './components/customers/CustomerEdit';
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
+import CategoryList from './components/categories/CategoryList';
 import QuoteList from './components/quotes/QuoteList';
 import QuoteForm from './components/quotes/QuoteForm';
 import QuoteDetail from './components/quotes/QuoteDetail';
@@ -87,6 +88,9 @@ function App() {
     }
     if (currentPath === '/productos') {
       return <ProductList />;
+    }
+    if (currentPath === '/categorias') {
+      return <CategoryList />;
     }
     if (currentPath === '/presupuestos') {
       return <QuoteList />;
