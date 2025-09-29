@@ -1,10 +1,10 @@
 from django import forms
-from .models import Customer, Address
+from .models import Cliente, Direccion
 
 
-class CustomerForm(forms.ModelForm):
+class ClienteForm(forms.ModelForm):
     class Meta:
-        model = Customer
+        model = Cliente
         fields = [
             'type', 'name', 'tax_id', 'email', 'phone', 
             'default_price_list', 'credit_limit', 'notes', 'is_active'
@@ -22,9 +22,9 @@ class CustomerForm(forms.ModelForm):
         }
 
 
-class AddressForm(forms.ModelForm):
+class DireccionForm(forms.ModelForm):
     class Meta:
-        model = Address
+        model = Direccion
         fields = [
             'kind', 'street', 'number', 'city', 'province', 
             'postal_code', 'country', 'is_default'

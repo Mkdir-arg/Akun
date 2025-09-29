@@ -5,16 +5,16 @@ from rest_framework.permissions import IsAuthenticated
 from apps.core.permissions import RoleBasedPermission
 from django.db.models import Q
 from django.db import transaction
-from .models import Customer, Address, Contact, PaymentTerm, CustomerTag, CustomerNote, CustomerFile
+from .models import Cliente, Direccion, Contacto, TerminoPago, EtiquetaCliente, NotaCliente, ArchivoCliente
 from .serializers import (
-    CustomerSerializer, CustomerDetailSerializer, AddressSerializer,
-    ContactSerializer, PaymentTermSerializer, CustomerTagSerializer,
-    CustomerNoteSerializer, CustomerFileSerializer
+    ClienteSerializer, ClienteDetailSerializer, DireccionSerializer,
+    ContactoSerializer, TerminoPagoSerializer, EtiquetaClienteSerializer,
+    NotaClienteSerializer, ArchivoClienteSerializer
 )
 
 
-class CustomerViewSet(viewsets.ModelViewSet):
-    queryset = Customer.objects.select_related('default_price_list', 'payment_terms').prefetch_related('tags')
+class ClienteViewSet(viewsets.ModelViewSet):
+    queryset = Cliente.objects.select_related('default_price_list', 'payment_terms').prefetch_related('tags')
     permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name', 'code', 'tax_id', 'email', 'phone']
@@ -23,8 +23,8 @@ class CustomerViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return CustomerDetailSerializer
-        return CustomerSerializer
+            return ClienteDetailSerializer
+        return ClienteSerializer
     
     @action(detail=True, methods=['post'])
     def activate(self, request, pk=None):
@@ -51,14 +51,14 @@ class CustomerViewSet(viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 # Desmarcar direcciones default del mismo tipo
-                Address.objects.filter(customer=customer, kind=kind).update(is_default=False)
+                Direccion.objects.filter(customer=customer, kind=kind).update(is_default=False)
                 # Marcar nueva dirección como default
-                address = Address.objects.get(id=address_id, customer=customer)
+                address = Direccion.objects.get(id=address_id, customer=customer)
                 address.is_default = True
                 address.save()
                 
             return Response({'status': 'Dirección por defecto actualizada'})
-        except Address.DoesNotExist:
+        except Direccion.DoesNotExist:
             return Response({'error': 'Dirección no encontrada'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=True, methods=['post'])
@@ -69,66 +69,66 @@ class CustomerViewSet(viewsets.ModelViewSet):
         try:
             with transaction.atomic():
                 # Desmarcar contactos primarios
-                Contact.objects.filter(customer=customer).update(is_primary=False)
+                Contacto.objects.filter(customer=customer).update(is_primary=False)
                 # Marcar nuevo contacto como primario
-                contact = Contact.objects.get(id=contact_id, customer=customer)
+                contact = Contacto.objects.get(id=contact_id, customer=customer)
                 contact.is_primary = True
                 contact.save()
                 
             return Response({'status': 'Contacto principal actualizado'})
-        except Contact.DoesNotExist:
+        except Contacto.DoesNotExist:
             return Response({'error': 'Contacto no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
 
-class AddressViewSet(viewsets.ModelViewSet):
-    serializer_class = AddressSerializer
+class DireccionViewSet(viewsets.ModelViewSet):
+    serializer_class = DireccionSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Address.objects.select_related('customer')
+        return Direccion.objects.select_related('customer')
 
 
-class ContactViewSet(viewsets.ModelViewSet):
-    serializer_class = ContactSerializer
+class ContactoViewSet(viewsets.ModelViewSet):
+    serializer_class = ContactoSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):
-        return Contact.objects.select_related('customer')
+        return Contacto.objects.select_related('customer')
 
 
-class PaymentTermViewSet(viewsets.ModelViewSet):
-    queryset = PaymentTerm.objects.filter(is_active=True)
-    serializer_class = PaymentTermSerializer
+class TerminoPagoViewSet(viewsets.ModelViewSet):
+    queryset = TerminoPago.objects.filter(is_active=True)
+    serializer_class = TerminoPagoSerializer
     permission_classes = [IsAuthenticated]
     ordering = ['days']
 
 
-class CustomerTagViewSet(viewsets.ModelViewSet):
-    queryset = CustomerTag.objects.filter(is_active=True)
-    serializer_class = CustomerTagSerializer
+class EtiquetaClienteViewSet(viewsets.ModelViewSet):
+    queryset = EtiquetaCliente.objects.filter(is_active=True)
+    serializer_class = EtiquetaClienteSerializer
     permission_classes = [IsAuthenticated]
     ordering = ['name']
 
 
-class CustomerNoteViewSet(viewsets.ModelViewSet):
-    serializer_class = CustomerNoteSerializer
+class NotaClienteViewSet(viewsets.ModelViewSet):
+    serializer_class = NotaClienteSerializer
     permission_classes = [IsAuthenticated]
     ordering = ['-pinned', '-created_at']
     
     def get_queryset(self):
-        return CustomerNote.objects.select_related('customer', 'author')
+        return NotaCliente.objects.select_related('customer', 'author')
     
     def perform_create(self, serializer):
         serializer.save(author=self.request.user)
 
 
-class CustomerFileViewSet(viewsets.ModelViewSet):
-    serializer_class = CustomerFileSerializer
+class ArchivoClienteViewSet(viewsets.ModelViewSet):
+    serializer_class = ArchivoClienteSerializer
     permission_classes = [IsAuthenticated]
     ordering = ['-uploaded_at']
     
     def get_queryset(self):
-        return CustomerFile.objects.select_related('customer', 'uploaded_by')
+        return ArchivoCliente.objects.select_related('customer', 'uploaded_by')
     
     def perform_create(self, serializer):
         serializer.save(uploaded_by=self.request.user)

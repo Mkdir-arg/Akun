@@ -1,22 +1,22 @@
 from rest_framework import serializers
-from .models import Customer, Address, Contact, PaymentTerm, CustomerTag, CustomerNote, CustomerFile
+from .models import Cliente, Direccion, Contacto, TerminoPago, EtiquetaCliente, NotaCliente, ArchivoCliente
 
 
-class CustomerTagSerializer(serializers.ModelSerializer):
+class EtiquetaClienteSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CustomerTag
+        model = EtiquetaCliente
         fields = ['id', 'name', 'color', 'is_active']
 
 
-class PaymentTermSerializer(serializers.ModelSerializer):
+class TerminoPagoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PaymentTerm
+        model = TerminoPago
         fields = ['id', 'name', 'days', 'early_discount_pct', 'notes', 'is_active']
 
 
-class AddressSerializer(serializers.ModelSerializer):
+class DireccionSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Address
+        model = Direccion
         fields = ['id', 'customer', 'kind', 'street', 'number', 'city', 'province', 
                  'postal_code', 'country', 'is_default']
         
@@ -25,7 +25,7 @@ class AddressSerializer(serializers.ModelSerializer):
             customer = data.get('customer')
             kind = data.get('kind')
             
-            existing = Address.objects.filter(
+            existing = Direccion.objects.filter(
                 customer=customer,
                 kind=kind,
                 is_default=True
@@ -41,11 +41,11 @@ class AddressSerializer(serializers.ModelSerializer):
         return data
 
 
-class ContactSerializer(serializers.ModelSerializer):
+class ContactoSerializer(serializers.ModelSerializer):
     full_name = serializers.ReadOnlyField()
     
     class Meta:
-        model = Contact
+        model = Contacto
         fields = ['id', 'customer', 'first_name', 'last_name', 'full_name', 
                  'email', 'phone', 'role', 'is_primary']
         
@@ -53,7 +53,7 @@ class ContactSerializer(serializers.ModelSerializer):
         if data.get('is_primary'):
             customer = data.get('customer')
             
-            existing = Contact.objects.filter(
+            existing = Contacto.objects.filter(
                 customer=customer,
                 is_primary=True
             )
@@ -68,22 +68,22 @@ class ContactSerializer(serializers.ModelSerializer):
         return data
 
 
-class CustomerNoteSerializer(serializers.ModelSerializer):
+class NotaClienteSerializer(serializers.ModelSerializer):
     author_name = serializers.CharField(source='author.get_full_name', read_only=True)
     
     class Meta:
-        model = CustomerNote
+        model = NotaCliente
         fields = ['id', 'customer', 'author', 'author_name', 'body', 'pinned', 
                  'created_at', 'updated_at']
         read_only_fields = ['author']
 
 
-class CustomerFileSerializer(serializers.ModelSerializer):
+class ArchivoClienteSerializer(serializers.ModelSerializer):
     uploaded_by_name = serializers.CharField(source='uploaded_by.get_full_name', read_only=True)
     file_size = serializers.SerializerMethodField()
     
     class Meta:
-        model = CustomerFile
+        model = ArchivoCliente
         fields = ['id', 'customer', 'file', 'title', 'uploaded_by', 'uploaded_by_name',
                  'uploaded_at', 'file_size']
         read_only_fields = ['uploaded_by']
@@ -95,13 +95,13 @@ class CustomerFileSerializer(serializers.ModelSerializer):
             return 0
 
 
-class CustomerSerializer(serializers.ModelSerializer):
-    tags = CustomerTagSerializer(many=True, read_only=True)
+class ClienteSerializer(serializers.ModelSerializer):
+    tags = EtiquetaClienteSerializer(many=True, read_only=True)
     default_price_list_name = serializers.CharField(source='default_price_list.name', read_only=True)
     payment_terms_name = serializers.CharField(source='payment_terms.name', read_only=True)
     
     class Meta:
-        model = Customer
+        model = Cliente
         fields = ['id', 'code', 'type', 'name', 'tax_id', 'email', 'phone',
                  'default_price_list', 'default_price_list_name', 'payment_terms', 
                  'payment_terms_name', 'credit_limit', 'status', 'tags', 'notes',
@@ -114,11 +114,11 @@ class CustomerSerializer(serializers.ModelSerializer):
         return value
 
 
-class CustomerDetailSerializer(CustomerSerializer):
-    addresses = AddressSerializer(many=True, read_only=True)
-    contacts = ContactSerializer(many=True, read_only=True)
-    customer_notes = CustomerNoteSerializer(many=True, read_only=True)
-    files = CustomerFileSerializer(many=True, read_only=True)
+class ClienteDetailSerializer(ClienteSerializer):
+    addresses = DireccionSerializer(many=True, read_only=True)
+    contacts = ContactoSerializer(many=True, read_only=True)
+    customer_notes = NotaClienteSerializer(many=True, read_only=True)
+    files = ArchivoClienteSerializer(many=True, read_only=True)
     
-    class Meta(CustomerSerializer.Meta):
-        fields = CustomerSerializer.Meta.fields + ['addresses', 'contacts', 'customer_notes', 'files']
+    class Meta(ClienteSerializer.Meta):
+        fields = ClienteSerializer.Meta.fields + ['addresses', 'contacts', 'customer_notes', 'files']

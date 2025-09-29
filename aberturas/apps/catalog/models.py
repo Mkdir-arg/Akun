@@ -4,7 +4,7 @@ from django.db.models import Q
 from decimal import Decimal
 
 
-class UoM(models.Model):
+class UnidadMedida(models.Model):
     CATEGORY_CHOICES = [
         ('length', 'Longitud'),
         ('area', 'Área'),
@@ -25,7 +25,7 @@ class UoM(models.Model):
         return f"{self.name} ({self.code})"
 
 
-class ProductCategory(models.Model):
+class CategoriaProducto(models.Model):
     name = models.CharField(max_length=100)
     code = models.SlugField(unique=True)
     parent = models.ForeignKey('self', on_delete=models.CASCADE, null=True, blank=True)
@@ -42,7 +42,7 @@ class ProductCategory(models.Model):
         return self.name
 
 
-class TaxRate(models.Model):
+class TasaImpuesto(models.Model):
     name = models.CharField(max_length=50)
     rate = models.DecimalField(max_digits=5, decimal_places=2)
     is_default = models.BooleanField(default=False)
@@ -52,7 +52,7 @@ class TaxRate(models.Model):
         verbose_name_plural = 'Tasas de Impuesto'
         
     def clean(self):
-        if self.is_default and TaxRate.objects.filter(is_default=True).exclude(pk=self.pk).exists():
+        if self.is_default and TasaImpuesto.objects.filter(is_default=True).exclude(pk=self.pk).exists():
             raise ValidationError('Solo puede haber una tasa de impuesto por defecto.')
             
     def save(self, *args, **kwargs):
@@ -63,7 +63,7 @@ class TaxRate(models.Model):
         return self.name
 
 
-class Product(models.Model):
+class Producto(models.Model):
     MATERIAL_CHOICES = [
         ('ALUMINIO', 'Aluminio'),
         ('PVC', 'PVC'),
@@ -125,9 +125,9 @@ class Product(models.Model):
     
     sku = models.CharField(max_length=50, unique=True, db_index=True)
     name = models.CharField(max_length=200, db_index=True)
-    category = models.ForeignKey(ProductCategory, on_delete=models.PROTECT)
+    category = models.ForeignKey(CategoriaProducto, on_delete=models.PROTECT)
     subcategory = models.CharField(max_length=100, blank=True, null=True)
-    uom = models.ForeignKey(UoM, on_delete=models.PROTECT, default=1)
+    uom = models.ForeignKey(UnidadMedida, on_delete=models.PROTECT, default=1)
     material = models.CharField(max_length=20, choices=MATERIAL_CHOICES)
     opening_type = models.CharField(max_length=20, choices=OPENING_TYPE_CHOICES)
     glass_type = models.CharField(max_length=20, choices=GLASS_TYPE_CHOICES, blank=True)
@@ -135,8 +135,8 @@ class Product(models.Model):
     width_mm = models.PositiveIntegerField(null=True, blank=True)
     height_mm = models.PositiveIntegerField(null=True, blank=True)
     weight_kg = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
-    tax = models.ForeignKey(TaxRate, on_delete=models.PROTECT)
-    currency = models.ForeignKey('core.Currency', on_delete=models.PROTECT, default=1)
+    tax = models.ForeignKey(TasaImpuesto, on_delete=models.PROTECT)
+    currency = models.ForeignKey('core.Moneda', on_delete=models.PROTECT, default=1)
     pricing_method = models.CharField(max_length=10, choices=PRICING_METHOD_CHOICES, default='FIXED')
     base_price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     price_per_m2 = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -161,7 +161,7 @@ class Product(models.Model):
             
     def save(self, *args, **kwargs):
         if not self.tax_id:
-            default_tax = TaxRate.objects.filter(is_default=True).first()
+            default_tax = TasaImpuesto.objects.filter(is_default=True).first()
             if default_tax:
                 self.tax = default_tax
         self.full_clean()
@@ -171,7 +171,7 @@ class Product(models.Model):
         return f"{self.sku} - {self.name}"
 
 
-class PriceList(models.Model):
+class ListaPrecios(models.Model):
     name = models.CharField(max_length=100, unique=True)
     currency = models.CharField(max_length=3, default='ARS')
     is_default = models.BooleanField(default=False)
@@ -183,7 +183,7 @@ class PriceList(models.Model):
         verbose_name_plural = 'Listas de Precios'
         
     def clean(self):
-        if self.is_default and PriceList.objects.filter(is_default=True).exclude(pk=self.pk).exists():
+        if self.is_default and ListaPrecios.objects.filter(is_default=True).exclude(pk=self.pk).exists():
             raise ValidationError('Solo puede haber una lista de precios por defecto.')
             
     def save(self, *args, **kwargs):
@@ -194,14 +194,14 @@ class PriceList(models.Model):
         return self.name
 
 
-class PriceListRule(models.Model):
+class ReglaListaPrecios(models.Model):
     METHOD_CHOICES = [
         ('FIXED', 'Precio Fijo'),
         ('AREA', 'Por Área'),
     ]
     
-    price_list = models.ForeignKey(PriceList, on_delete=models.CASCADE)
-    product = models.ForeignKey(Product, on_delete=models.CASCADE)
+    price_list = models.ForeignKey(ListaPrecios, on_delete=models.CASCADE)
+    product = models.ForeignKey(Producto, on_delete=models.CASCADE)
     method = models.CharField(max_length=10, choices=METHOD_CHOICES, blank=True)
     fixed_price = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)
     price_per_m2 = models.DecimalField(max_digits=12, decimal_places=2, null=True, blank=True)

@@ -1,41 +1,41 @@
 from rest_framework import serializers
-from .models import Product, ProductCategory, UoM, TaxRate, PriceList, PriceListRule
+from .models import Producto, CategoriaProducto, UnidadMedida, TasaImpuesto, ListaPrecios, ReglaListaPrecios
 
 
-class UoMSerializer(serializers.ModelSerializer):
+class UnidadMedidaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = UoM
+        model = UnidadMedida
         fields = ['id', 'code', 'name', 'category', 'is_active']
 
 
-class ProductCategorySerializer(serializers.ModelSerializer):
+class CategoriaProductoSerializer(serializers.ModelSerializer):
     parent_name = serializers.CharField(source='parent.name', read_only=True)
     
     class Meta:
-        model = ProductCategory
+        model = CategoriaProducto
         fields = ['id', 'name', 'code', 'parent', 'parent_name', 'is_active']
 
 
-class TaxRateSerializer(serializers.ModelSerializer):
+class TasaImpuestoSerializer(serializers.ModelSerializer):
     class Meta:
-        model = TaxRate
+        model = TasaImpuesto
         fields = ['id', 'name', 'rate', 'is_default']
 
 
-class PriceListSerializer(serializers.ModelSerializer):
+class ListaPreciosSerializer(serializers.ModelSerializer):
     class Meta:
-        model = PriceList
+        model = ListaPrecios
         fields = ['id', 'name', 'currency', 'is_default', 'active_from', 'active_to']
 
 
-class ProductSerializer(serializers.ModelSerializer):
+class ProductoSerializer(serializers.ModelSerializer):
     category_name = serializers.CharField(source='category.name', read_only=True)
     uom_name = serializers.CharField(source='uom.name', read_only=True)
     tax_name = serializers.CharField(source='tax.name', read_only=True)
     tax_rate = serializers.DecimalField(source='tax.rate', max_digits=5, decimal_places=2, read_only=True)
     
     class Meta:
-        model = Product
+        model = Producto
         fields = [
             'id', 'sku', 'name', 'category', 'category_name', 'uom', 'uom_name',
             'material', 'opening_type', 'glass_type', 'color_code',
@@ -45,17 +45,17 @@ class ProductSerializer(serializers.ModelSerializer):
         ]
         
     def validate_sku(self, value):
-        if Product.objects.filter(sku=value).exclude(pk=self.instance.pk if self.instance else None).exists():
+        if Producto.objects.filter(sku=value).exclude(pk=self.instance.pk if self.instance else None).exists():
             raise serializers.ValidationError('Ya existe un producto con este SKU.')
         return value
 
 
-class PriceListRuleSerializer(serializers.ModelSerializer):
+class ReglaListaPreciosSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     
     class Meta:
-        model = PriceListRule
+        model = ReglaListaPrecios
         fields = [
             'id', 'price_list', 'product', 'product_name', 'product_sku',
             'method', 'fixed_price', 'price_per_m2', 'min_area_m2',
@@ -63,8 +63,8 @@ class PriceListRuleSerializer(serializers.ModelSerializer):
         ]
 
 
-class ProductDetailSerializer(ProductSerializer):
-    price_rules = PriceListRuleSerializer(many=True, read_only=True, source='pricelistrule_set')
+class ProductoDetailSerializer(ProductoSerializer):
+    price_rules = ReglaListaPreciosSerializer(many=True, read_only=True, source='reglalistaprecios_set')
     
-    class Meta(ProductSerializer.Meta):
-        fields = ProductSerializer.Meta.fields + ['price_rules']
+    class Meta(ProductoSerializer.Meta):
+        fields = ProductoSerializer.Meta.fields + ['price_rules']

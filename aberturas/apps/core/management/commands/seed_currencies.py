@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
 from decimal import Decimal
-from apps.core.models import Currency
+from apps.core.models import Moneda
 
 
 class Command(BaseCommand):
@@ -26,7 +26,7 @@ class Command(BaseCommand):
         ]
         
         for currency_data in currencies_data:
-            currency, created = Currency.objects.get_or_create(
+            currency, created = Moneda.objects.get_or_create(
                 code=currency_data['code'],
                 defaults=currency_data
             )

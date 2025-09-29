@@ -3,15 +3,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django.db.models import Q
 from django.utils import timezone
-from .models import Quote, QuoteItem, Order, OrderItem
+from .models import Presupuesto, LineaPresupuesto, Pedido, LineaPedido
 from .serializers import (
-    QuoteSerializer, QuoteDetailSerializer, QuoteItemSerializer,
-    OrderSerializer, OrderDetailSerializer, OrderItemSerializer
+    PresupuestoSerializer, PresupuestoDetailSerializer, LineaPresupuestoSerializer,
+    PedidoSerializer, PedidoDetailSerializer, LineaPedidoSerializer
 )
 
 
-class QuoteViewSet(viewsets.ModelViewSet):
-    queryset = Quote.objects.select_related('customer', 'created_by', 'assigned_to').prefetch_related('items')
+class PresupuestoViewSet(viewsets.ModelViewSet):
+    queryset = Presupuesto.objects.select_related('customer', 'created_by', 'assigned_to').prefetch_related('items')
     permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['number', 'customer__name', 'customer__tax_id']
@@ -32,8 +32,8 @@ class QuoteViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return QuoteDetailSerializer
-        return QuoteSerializer
+            return PresupuestoDetailSerializer
+        return PresupuestoSerializer
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -80,7 +80,7 @@ class QuoteViewSet(viewsets.ModelViewSet):
         print(f"DEBUG - Converting quote {quote.id} to order")
         
         try:
-            order = Order.create_from_quote(
+            order = Pedido.create_from_quote(
                 quote=quote,
                 created_by=request.user if request.user.is_authenticated else None
             )
@@ -122,12 +122,12 @@ class QuoteViewSet(viewsets.ModelViewSet):
         return Response({'message': 'Presupuesto rechazado'})
 
 
-class QuoteItemViewSet(viewsets.ModelViewSet):
-    serializer_class = QuoteItemSerializer
+class LineaPresupuestoViewSet(viewsets.ModelViewSet):
+    serializer_class = LineaPresupuestoSerializer
     permission_classes = []  # Temporalmente sin permisos
     
     def get_queryset(self):
-        queryset = QuoteItem.objects.select_related('quote', 'product')
+        queryset = LineaPresupuesto.objects.select_related('quote', 'product')
         quote_id = self.request.query_params.get('quote')
         if quote_id:
             queryset = queryset.filter(quote=quote_id)
@@ -145,8 +145,8 @@ class QuoteItemViewSet(viewsets.ModelViewSet):
         return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
 
 
-class OrderViewSet(viewsets.ModelViewSet):
-    queryset = Order.objects.select_related('customer', 'quote', 'created_by', 'assigned_to').prefetch_related('items')
+class PedidoViewSet(viewsets.ModelViewSet):
+    queryset = Pedido.objects.select_related('customer', 'quote', 'created_by', 'assigned_to').prefetch_related('items')
     permission_classes = []  # Temporalmente sin permisos
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['number', 'title', 'customer__name', 'customer__tax_id']
@@ -155,8 +155,8 @@ class OrderViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return OrderDetailSerializer
-        return OrderSerializer
+            return PedidoDetailSerializer
+        return PedidoSerializer
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -227,12 +227,12 @@ class OrderViewSet(viewsets.ModelViewSet):
         return Response({'message': 'Pedido cancelado'})
 
 
-class OrderItemViewSet(viewsets.ModelViewSet):
-    serializer_class = OrderItemSerializer
+class LineaPedidoViewSet(viewsets.ModelViewSet):
+    serializer_class = LineaPedidoSerializer
     permission_classes = []  # Temporalmente sin permisos
     
     def get_queryset(self):
-        queryset = OrderItem.objects.select_related('order', 'product')
+        queryset = LineaPedido.objects.select_related('order', 'product')
         order_id = self.request.query_params.get('order')
         if order_id:
             queryset = queryset.filter(order=order_id)

@@ -1,26 +1,26 @@
 from django.contrib import admin
 from django.db import transaction
-from .models import UoM, ProductCategory, TaxRate, Product, PriceList, PriceListRule
+from .models import UnidadMedida, CategoriaProducto, TasaImpuesto, Producto, ListaPrecios, ReglaListaPrecios
 
 
-@admin.register(UoM)
-class UoMAdmin(admin.ModelAdmin):
+@admin.register(UnidadMedida)
+class UnidadMedidaAdmin(admin.ModelAdmin):
     list_display = ('code', 'name', 'category', 'is_active')
     list_filter = ('category', 'is_active')
     search_fields = ('code', 'name')
     ordering = ('code',)
 
 
-@admin.register(ProductCategory)
-class ProductCategoryAdmin(admin.ModelAdmin):
+@admin.register(CategoriaProducto)
+class CategoriaProductoAdmin(admin.ModelAdmin):
     list_display = ('name', 'code', 'parent', 'is_active')
     list_filter = ('is_active', 'parent')
     search_fields = ('name', 'code')
     prepopulated_fields = {'code': ('name',)}
 
 
-@admin.register(TaxRate)
-class TaxRateAdmin(admin.ModelAdmin):
+@admin.register(TasaImpuesto)
+class TasaImpuestoAdmin(admin.ModelAdmin):
     list_display = ('name', 'rate', 'is_default')
     list_filter = ('is_default',)
     search_fields = ('name',)
@@ -31,7 +31,7 @@ class TaxRateAdmin(admin.ModelAdmin):
             return
             
         with transaction.atomic():
-            TaxRate.objects.filter(is_default=True).update(is_default=False)
+            TasaImpuesto.objects.filter(is_default=True).update(is_default=False)
             queryset.update(is_default=True)
             
         self.message_user(request, "Tasa de impuesto marcada como predeterminada.")
@@ -40,8 +40,8 @@ class TaxRateAdmin(admin.ModelAdmin):
     actions = [make_default]
 
 
-@admin.register(Product)
-class ProductAdmin(admin.ModelAdmin):
+@admin.register(Producto)
+class ProductoAdmin(admin.ModelAdmin):
     list_display = ('sku', 'name', 'category', 'material', 'opening_type', 'pricing_method', 'is_active')
     list_filter = ('category', 'material', 'opening_type', 'pricing_method', 'is_active', 'is_service')
     search_fields = ('sku', 'name')
@@ -62,8 +62,8 @@ class ProductAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(PriceList)
-class PriceListAdmin(admin.ModelAdmin):
+@admin.register(ListaPrecios)
+class ListaPreciosAdmin(admin.ModelAdmin):
     list_display = ('name', 'currency', 'is_default', 'active_from', 'active_to')
     list_filter = ('currency', 'is_default')
     search_fields = ('name',)
@@ -74,7 +74,7 @@ class PriceListAdmin(admin.ModelAdmin):
             return
             
         with transaction.atomic():
-            PriceList.objects.filter(is_default=True).update(is_default=False)
+            ListaPrecios.objects.filter(is_default=True).update(is_default=False)
             queryset.update(is_default=True)
             
         self.message_user(request, "Lista de precios marcada como predeterminada.")
@@ -83,8 +83,8 @@ class PriceListAdmin(admin.ModelAdmin):
     actions = [make_default]
 
 
-@admin.register(PriceListRule)
-class PriceListRuleAdmin(admin.ModelAdmin):
+@admin.register(ReglaListaPrecios)
+class ReglaListaPreciosAdmin(admin.ModelAdmin):
     list_display = ('price_list', 'product', 'method', 'discount_pct', 'valid_from', 'valid_to')
     list_filter = ('method', 'price_list')
     search_fields = ('product__sku', 'product__name', 'price_list__name')

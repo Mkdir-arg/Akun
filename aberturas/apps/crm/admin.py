@@ -1,20 +1,20 @@
 from django.contrib import admin
-from .models import Customer, Address
+from .models import Cliente, Direccion
 
 
-class AddressInline(admin.TabularInline):
-    model = Address
+class DireccionInline(admin.TabularInline):
+    model = Direccion
     extra = 1
     fields = ('kind', 'street', 'number', 'city', 'province', 'postal_code', 'is_default')
 
 
-@admin.register(Customer)
-class CustomerAdmin(admin.ModelAdmin):
+@admin.register(Cliente)
+class ClienteAdmin(admin.ModelAdmin):
     list_display = ('code', 'name', 'type', 'tax_id', 'email', 'phone', 'is_active')
     list_filter = ('type', 'is_active')
     search_fields = ('code', 'name', 'tax_id', 'email')
     list_select_related = ('default_price_list',)
-    inlines = [AddressInline]
+    inlines = [DireccionInline]
     readonly_fields = ('code',)
     
     fieldsets = (
@@ -34,8 +34,8 @@ class CustomerAdmin(admin.ModelAdmin):
     )
 
 
-@admin.register(Address)
-class AddressAdmin(admin.ModelAdmin):
+@admin.register(Direccion)
+class DireccionAdmin(admin.ModelAdmin):
     list_display = ('customer', 'kind', 'street', 'number', 'city', 'province', 'is_default')
     list_filter = ('kind', 'province', 'is_default')
     search_fields = ('customer__name', 'street', 'city')

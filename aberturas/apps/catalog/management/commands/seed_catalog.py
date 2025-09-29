@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from decimal import Decimal
-from apps.catalog.models import UoM, ProductCategory, TaxRate, PriceList, Product, PriceListRule
-from apps.core.models import Currency
+from apps.catalog.models import UnidadMedida, CategoriaProducto, TasaImpuesto, ListaPrecios, Producto, ReglaListaPrecios
+from apps.core.models import Moneda
 
 
 class Command(BaseCommand):
@@ -27,7 +27,7 @@ class Command(BaseCommand):
         ]
         
         for currency_data in currencies_data:
-            currency, created = Currency.objects.get_or_create(
+            currency, created = Moneda.objects.get_or_create(
                 code=currency_data['code'],
                 defaults=currency_data
             )
@@ -43,7 +43,7 @@ class Command(BaseCommand):
         ]
         
         for uom_data in uoms_data:
-            uom, created = UoM.objects.get_or_create(
+            uom, created = UnidadMedida.objects.get_or_create(
                 code=uom_data['code'],
                 defaults=uom_data
             )
@@ -59,7 +59,7 @@ class Command(BaseCommand):
         ]
         
         for cat_data in categories_data:
-            category, created = ProductCategory.objects.get_or_create(
+            category, created = CategoriaProducto.objects.get_or_create(
                 code=cat_data['code'],
                 defaults=cat_data
             )
@@ -74,7 +74,7 @@ class Command(BaseCommand):
         ]
         
         for tax_data in tax_rates_data:
-            tax, created = TaxRate.objects.get_or_create(
+            tax, created = TasaImpuesto.objects.get_or_create(
                 name=tax_data['name'],
                 defaults=tax_data
             )
@@ -82,7 +82,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'Tasa de impuesto creada: {tax}')
 
         # Crear lista de precios
-        price_list, created = PriceList.objects.get_or_create(
+        price_list, created = ListaPrecios.objects.get_or_create(
             name='Lista General',
             defaults={
                 'currency': 'ARS',
@@ -93,12 +93,12 @@ class Command(BaseCommand):
             self.stdout.write(f'Lista de precios creada: {price_list}')
 
         # Obtener referencias
-        uom_un = UoM.objects.get(code='UN')
-        uom_m2 = UoM.objects.get(code='M2')
-        cat_ventanas = ProductCategory.objects.get(code='ventanas')
-        cat_puertas = ProductCategory.objects.get(code='puertas')
-        cat_accesorios = ProductCategory.objects.get(code='accesorios')
-        tax_21 = TaxRate.objects.get(name='IVA 21%')
+        uom_un = UnidadMedida.objects.get(code='UN')
+        uom_m2 = UnidadMedida.objects.get(code='M2')
+        cat_ventanas = CategoriaProducto.objects.get(code='ventanas')
+        cat_puertas = CategoriaProducto.objects.get(code='puertas')
+        cat_accesorios = CategoriaProducto.objects.get(code='accesorios')
+        tax_21 = TasaImpuesto.objects.get(name='IVA 21%')
 
         # Crear productos
         products_data = [
@@ -197,7 +197,7 @@ class Command(BaseCommand):
         ]
 
         for product_data in products_data:
-            product, created = Product.objects.get_or_create(
+            product, created = Producto.objects.get_or_create(
                 sku=product_data['sku'],
                 defaults=product_data
             )
@@ -215,7 +215,7 @@ class Command(BaseCommand):
                     'discount_pct': Decimal('0'),
                 }
                 
-                rule, rule_created = PriceListRule.objects.get_or_create(
+                rule, rule_created = ReglaListaPrecios.objects.get_or_create(
                     price_list=price_list,
                     product=product,
                     defaults=rule_data

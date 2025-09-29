@@ -1,10 +1,10 @@
 from django import forms
-from .models import Product, PriceList, PriceListRule
+from .models import Producto, ListaPrecios, ReglaListaPrecios
 
 
-class ProductForm(forms.ModelForm):
+class ProductoForm(forms.ModelForm):
     class Meta:
-        model = Product
+        model = Producto
         fields = [
             'sku', 'name', 'category', 'uom', 'material', 'opening_type', 
             'glass_type', 'color_code', 'width_mm', 'height_mm', 'weight_kg',
@@ -33,9 +33,9 @@ class ProductForm(forms.ModelForm):
         }
 
 
-class PriceListForm(forms.ModelForm):
+class ListaPreciosForm(forms.ModelForm):
     class Meta:
-        model = PriceList
+        model = ListaPrecios
         fields = ['name', 'currency', 'is_default', 'active_from', 'active_to']
         widgets = {
             'name': forms.TextInput(attrs={'class': 'input input-bordered w-full'}),
@@ -46,9 +46,9 @@ class PriceListForm(forms.ModelForm):
         }
 
 
-class PriceListRuleForm(forms.ModelForm):
+class ReglaListaPreciosForm(forms.ModelForm):
     class Meta:
-        model = PriceListRule
+        model = ReglaListaPrecios
         fields = [
             'product', 'method', 'fixed_price', 'price_per_m2', 'min_area_m2',
             'discount_pct', 'valid_from', 'valid_to'
@@ -70,11 +70,11 @@ class PriceListRuleForm(forms.ModelForm):
         
         if pricelist_pk:
             # Filtrar productos que no tengan regla en esta lista
-            existing_rules = PriceListRule.objects.filter(price_list_id=pricelist_pk)
+            existing_rules = ReglaListaPrecios.objects.filter(price_list_id=pricelist_pk)
             if self.instance.pk:
                 existing_rules = existing_rules.exclude(pk=self.instance.pk)
             
             excluded_products = existing_rules.values_list('product_id', flat=True)
-            self.fields['product'].queryset = Product.objects.exclude(
+            self.fields['product'].queryset = Producto.objects.exclude(
                 id__in=excluded_products
             ).filter(is_active=True)

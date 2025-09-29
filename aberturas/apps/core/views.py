@@ -1,8 +1,8 @@
 from rest_framework import viewsets
-from .models import Currency
-from .serializers import CurrencySerializer
+from .models import Moneda
+from .serializers import MonedaSerializer
 
 
-class CurrencyViewSet(viewsets.ModelViewSet):
-    queryset = Currency.objects.filter(is_active=True)
-    serializer_class = CurrencySerializer
+class MonedaViewSet(viewsets.ModelViewSet):
+    queryset = Moneda.objects.filter(is_active=True)
+    serializer_class = MonedaSerializer

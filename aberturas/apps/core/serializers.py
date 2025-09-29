@@ -1,9 +1,9 @@
 from rest_framework import serializers
-from .models import Currency
+from .models import Moneda
 
 
-class CurrencySerializer(serializers.ModelSerializer):
+class MonedaSerializer(serializers.ModelSerializer):
     class Meta:
-        model = Currency
+        model = Moneda
         fields = ['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default', 'is_active', 'created_at']
         read_only_fields = ['created_at']

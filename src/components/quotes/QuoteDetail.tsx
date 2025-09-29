@@ -74,6 +74,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
     days: '1',
     unit_price: '0',
     discount_pct: '0',
+    tax_rate: '21.00',
     description: '',
     currency: '1'
   });
@@ -172,6 +173,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
         ...newItem,
         product: productId,
         unit_price: price,
+        tax_rate: product.tax_rate || '21.00',
         description: product.name,
         currency: product.currency.toString()
       });
@@ -189,7 +191,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
       quantity: quantity,
       unit_price: parseFloat(newItem.unit_price),
       discount_pct: parseFloat(newItem.discount_pct),
-      tax_rate: 21.00,
+      tax_rate: parseFloat(newItem.tax_rate),
       currency: parseInt(newItem.currency),
       description: newItem.type === 'SERVICIO' ? 
         `${newItem.service_type} - ${newItem.description}` : 
@@ -222,6 +224,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
           days: '1',
           unit_price: '0',
           discount_pct: '0',
+          tax_rate: '21.00',
           description: '',
           currency: '1'
         });
@@ -435,6 +438,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Producto</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Cantidad</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Precio Unit.</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">IVA (%)</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Moneda</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Descuento</th>
                     <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
@@ -474,6 +478,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                       </td>
                       <td className="px-6 py-4 text-sm text-gray-900">{item.quantity}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">${parseFloat(item.unit_price).toLocaleString()}</td>
+                      <td className="px-6 py-4 text-sm text-gray-900">{item.tax_rate}%</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{item.currency_code || 'USD'}</td>
                       <td className="px-6 py-4 text-sm text-gray-900">{item.discount_pct}%</td>
                       <td className="px-6 py-4 text-sm font-medium text-gray-900">${parseFloat(item.total).toLocaleString()}</td>
@@ -531,15 +536,15 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
       </main>
 
       {showAddProduct && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <h3 className="text-lg font-semibold mb-4">Agregar Producto</h3>
             <form onSubmit={handleAddItem} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
                 <select
                   value={newItem.type}
-                  onChange={(e) => setNewItem({...newItem, type: e.target.value, product: '', service_type: '', assigned_to: ''})}
+                  onChange={(e) => setNewItem({...newItem, type: e.target.value, product: '', service_type: '', assigned_to: '', tax_rate: '21.00'})}
                   className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                   required
                 >
@@ -660,17 +665,32 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Descuento (%)</label>
-                <input
-                  type="number"
-                  value={newItem.discount_pct}
-                  onChange={(e) => setNewItem({...newItem, discount_pct: e.target.value})}
-                  min="0"
-                  max="100"
-                  step="0.01"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                />
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Descuento (%)</label>
+                  <input
+                    type="number"
+                    value={newItem.discount_pct}
+                    onChange={(e) => setNewItem({...newItem, discount_pct: e.target.value})}
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">IVA (%)</label>
+                  <input
+                    type="number"
+                    value={newItem.tax_rate}
+                    onChange={(e) => setNewItem({...newItem, tax_rate: e.target.value})}
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    required
+                  />
+                </div>
               </div>
 
               {newItem.type === 'SERVICIO' && (

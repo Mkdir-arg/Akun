@@ -5,13 +5,13 @@ from . import views
 app_name = 'crm'
 
 router = DefaultRouter()
-router.register(r'customers', views.CustomerViewSet)
-router.register(r'addresses', views.AddressViewSet, basename='address')
-router.register(r'contacts', views.ContactViewSet, basename='contact')
-router.register(r'payment-terms', views.PaymentTermViewSet)
-router.register(r'customer-tags', views.CustomerTagViewSet)
-router.register(r'notes', views.CustomerNoteViewSet, basename='customernote')
-router.register(r'files', views.CustomerFileViewSet, basename='customerfile')
+router.register(r'customers', views.ClienteViewSet)
+router.register(r'addresses', views.DireccionViewSet, basename='address')
+router.register(r'contacts', views.ContactoViewSet, basename='contact')
+router.register(r'payment-terms', views.TerminoPagoViewSet)
+router.register(r'customer-tags', views.EtiquetaClienteViewSet)
+router.register(r'notes', views.NotaClienteViewSet, basename='customernote')
+router.register(r'files', views.ArchivoClienteViewSet, basename='customerfile')
 
 urlpatterns = [
     path('api/', include(router.urls)),

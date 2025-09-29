@@ -2,7 +2,7 @@ from django.db import models
 from decimal import Decimal
 
 
-class Currency(models.Model):
+class Moneda(models.Model):
     code = models.CharField(max_length=3, unique=True, help_text="Código ISO de la moneda (USD, ARS, etc.)")
     name = models.CharField(max_length=100, help_text="Nombre completo de la moneda")
     symbol = models.CharField(max_length=5, help_text="Símbolo de la moneda ($, €, etc.)")
@@ -28,5 +28,5 @@ class Currency(models.Model):
     def save(self, *args, **kwargs):
         # Si esta moneda se marca como default, desmarcar las demás
         if self.is_default:
-            Currency.objects.filter(is_default=True).update(is_default=False)
+            Moneda.objects.filter(is_default=True).update(is_default=False)
         super().save(*args, **kwargs)

@@ -1,7 +1,7 @@
 from django.core.management.base import BaseCommand
 from decimal import Decimal
-from apps.crm.models import Customer, Address, Contact, PaymentTerm, CustomerTag, CustomerNote
-from apps.catalog.models import PriceList
+from apps.crm.models import Cliente, Direccion, Contacto, TerminoPago, EtiquetaCliente, NotaCliente
+from apps.catalog.models import ListaPrecios
 from apps.accounts.models import User
 
 
@@ -18,7 +18,7 @@ class Command(BaseCommand):
         ]
         
         for term_data in payment_terms:
-            term, created = PaymentTerm.objects.get_or_create(
+            term, created = TerminoPago.objects.get_or_create(
                 name=term_data['name'],
                 defaults=term_data
             )
@@ -35,7 +35,7 @@ class Command(BaseCommand):
         ]
         
         for tag_data in tags_data:
-            tag, created = CustomerTag.objects.get_or_create(
+            tag, created = EtiquetaCliente.objects.get_or_create(
                 name=tag_data['name'],
                 defaults=tag_data
             )
@@ -43,14 +43,14 @@ class Command(BaseCommand):
                 self.stdout.write(f'Tag creado: {tag}')
         
         # Obtener lista de precios por defecto
-        default_price_list = PriceList.objects.filter(is_default=True).first()
-        contado = PaymentTerm.objects.get(name='Contado')
-        dias_30 = PaymentTerm.objects.get(name='30 días')
+        default_price_list = ListaPrecios.objects.filter(is_default=True).first()
+        contado = TerminoPago.objects.get(name='Contado')
+        dias_30 = TerminoPago.objects.get(name='30 días')
         
         # Obtener tags
-        mayorista = CustomerTag.objects.get(name='Mayorista')
-        obra = CustomerTag.objects.get(name='Obra')
-        premium = CustomerTag.objects.get(name='Premium')
+        mayorista = EtiquetaCliente.objects.get(name='Mayorista')
+        obra = EtiquetaCliente.objects.get(name='Obra')
+        premium = EtiquetaCliente.objects.get(name='Premium')
         
         # Obtener usuario admin para notas
         admin_user = User.objects.filter(is_superuser=True).first()
@@ -187,7 +187,7 @@ class Command(BaseCommand):
         for i, customer_data in enumerate(customers_data):
             addresses_data = customer_data.pop('addresses', [])
             
-            customer, created = Customer.objects.get_or_create(
+            customer, created = Cliente.objects.get_or_create(
                 name=customer_data['name'],
                 defaults=customer_data
             )
@@ -206,12 +206,12 @@ class Command(BaseCommand):
                 # Crear direcciones
                 for address_data in addresses_data:
                     address_data['customer'] = customer
-                    address = Address.objects.create(**address_data)
+                    address = Direccion.objects.create(**address_data)
                     self.stdout.write(f'  Dirección creada: {address}')
                 
                 # Crear contactos
                 if customer.type == 'EMPRESA':
-                    contact = Contact.objects.create(
+                    contact = Contacto.objects.create(
                         customer=customer,
                         first_name='Carlos',
                         last_name='Responsable',
@@ -224,7 +224,7 @@ class Command(BaseCommand):
                 
                 # Crear nota inicial
                 if admin_user:
-                    note = CustomerNote.objects.create(
+                    note = NotaCliente.objects.create(
                         customer=customer,
                         author=admin_user,
                         body=f'Cliente {customer.type.lower()} creado en el sistema. Revisar documentación y condiciones comerciales.',

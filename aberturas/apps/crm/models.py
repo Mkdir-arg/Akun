@@ -4,7 +4,7 @@ from django.conf import settings
 from decimal import Decimal
 
 
-class Customer(models.Model):
+class Cliente(models.Model):
     TYPE_CHOICES = [
         ('PERSONA', 'Persona'),
         ('EMPRESA', 'Empresa'),
@@ -23,20 +23,20 @@ class Customer(models.Model):
     email = models.EmailField(null=True, blank=True)
     phone = models.CharField(max_length=40, null=True, blank=True)
     default_price_list = models.ForeignKey(
-        'catalog.PriceList', 
+        'catalog.ListaPrecios', 
         on_delete=models.SET_NULL, 
         null=True, 
         blank=True
     )
     payment_terms = models.ForeignKey(
-        'PaymentTerm',
+        'TerminoPago',
         on_delete=models.SET_NULL,
         null=True,
         blank=True
     )
     credit_limit = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='ACTIVO')
-    tags = models.ManyToManyField('CustomerTag', blank=True)
+    tags = models.ManyToManyField('EtiquetaCliente', blank=True)
     notes = models.TextField(blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True, null=True)
@@ -74,7 +74,7 @@ class Customer(models.Model):
         if not self.code:
             with transaction.atomic():
                 # Generar código correlativo
-                last_customer = Customer.objects.select_for_update().order_by('-id').first()
+                last_customer = Cliente.objects.select_for_update().order_by('-id').first()
                 if last_customer and last_customer.code:
                     try:
                         last_number = int(last_customer.code[1:])  # Quitar 'C' del inicio
@@ -97,13 +97,13 @@ class Customer(models.Model):
         return f"{self.code} - {self.name}"
 
 
-class Address(models.Model):
+class Direccion(models.Model):
     KIND_CHOICES = [
         ('FACTURACION', 'Facturación'),
         ('ENVIO', 'Envío'),
     ]
     
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='addresses')
+    customer = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='addresses')
     kind = models.CharField(max_length=15, choices=KIND_CHOICES)
     street = models.CharField(max_length=200)
     number = models.CharField(max_length=20)
@@ -127,7 +127,7 @@ class Address(models.Model):
     def clean(self):
         if self.is_default:
             # Verificar que no haya otra dirección default del mismo tipo para el mismo cliente
-            existing = Address.objects.filter(
+            existing = Direccion.objects.filter(
                 customer=self.customer,
                 kind=self.kind,
                 is_default=True
@@ -146,8 +146,8 @@ class Address(models.Model):
         return f"{self.street} {self.number}, {self.city} ({self.get_kind_display()})"
 
 
-class Contact(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='contacts')
+class Contacto(models.Model):
+    customer = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='contacts')
     first_name = models.CharField(max_length=100)
     last_name = models.CharField(max_length=100)
     email = models.EmailField(blank=True)
@@ -172,7 +172,7 @@ class Contact(models.Model):
     
     def clean(self):
         if self.is_primary:
-            existing = Contact.objects.filter(
+            existing = Contacto.objects.filter(
                 customer=self.customer,
                 is_primary=True
             ).exclude(pk=self.pk)
@@ -188,7 +188,7 @@ class Contact(models.Model):
         return f"{self.full_name} ({self.customer.name})"
 
 
-class PaymentTerm(models.Model):
+class TerminoPago(models.Model):
     name = models.CharField(max_length=100, unique=True)
     days = models.PositiveSmallIntegerField()
     early_discount_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
@@ -204,7 +204,7 @@ class PaymentTerm(models.Model):
         return self.name
 
 
-class CustomerTag(models.Model):
+class EtiquetaCliente(models.Model):
     name = models.CharField(max_length=50, unique=True)
     color = models.CharField(max_length=7, blank=True, help_text='Color hex (ej: #FF5733)')
     is_active = models.BooleanField(default=True)
@@ -218,8 +218,8 @@ class CustomerTag(models.Model):
         return self.name
 
 
-class CustomerNote(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='customer_notes')
+class NotaCliente(models.Model):
+    customer = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='customer_notes')
     author = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     body = models.TextField()
     pinned = models.BooleanField(default=False)
@@ -235,8 +235,8 @@ class CustomerNote(models.Model):
         return f"Nota de {self.customer.name} - {self.created_at.strftime('%d/%m/%Y')}"
 
 
-class CustomerFile(models.Model):
-    customer = models.ForeignKey(Customer, on_delete=models.CASCADE, related_name='files')
+class ArchivoCliente(models.Model):
+    customer = models.ForeignKey(Cliente, on_delete=models.CASCADE, related_name='files')
     file = models.FileField(upload_to='customers/files/%Y/%m/')
     title = models.CharField(max_length=255, blank=True)
     uploaded_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)

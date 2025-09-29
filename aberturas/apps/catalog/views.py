@@ -3,15 +3,15 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from django.db.models import Q
-from .models import Product, ProductCategory, UoM, TaxRate, PriceList, PriceListRule
+from .models import Producto, CategoriaProducto, UnidadMedida, TasaImpuesto, ListaPrecios, ReglaListaPrecios
 from .serializers import (
-    ProductSerializer, ProductDetailSerializer, ProductCategorySerializer,
-    UoMSerializer, TaxRateSerializer, PriceListSerializer, PriceListRuleSerializer
+    ProductoSerializer, ProductoDetailSerializer, CategoriaProductoSerializer,
+    UnidadMedidaSerializer, TasaImpuestoSerializer, ListaPreciosSerializer, ReglaListaPreciosSerializer
 )
 
 
-class ProductViewSet(viewsets.ModelViewSet):
-    queryset = Product.objects.select_related('category', 'uom', 'tax').prefetch_related('pricelistrule_set')
+class ProductoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.select_related('category', 'uom', 'tax')
     permission_classes = []  # Temporalmente sin permisos
     
     def create(self, request, *args, **kwargs):
@@ -20,9 +20,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             category_id = request.data.get('category')
             if category_id:
                 try:
-                    category = ProductCategory.objects.get(id=category_id)
+                    category = CategoriaProducto.objects.get(id=category_id)
                     prefix = category.code.upper()[:3]
-                    last_product = Product.objects.filter(sku__startswith=prefix).order_by('-id').first()
+                    last_product = Producto.objects.filter(sku__startswith=prefix).order_by('-id').first()
                     
                     if last_product:
                         try:
@@ -34,7 +34,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                         new_number = 1
                     
                     request.data['sku'] = f"{prefix}-{new_number:03d}"
-                except ProductCategory.DoesNotExist:
+                except CategoriaProducto.DoesNotExist:
                     pass
         
         return super().create(request, *args, **kwargs)
@@ -45,8 +45,8 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     def get_serializer_class(self):
         if self.action == 'retrieve':
-            return ProductDetailSerializer
-        return ProductSerializer
+            return ProductoDetailSerializer
+        return ProductoSerializer
     
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -95,9 +95,9 @@ class ProductViewSet(viewsets.ModelViewSet):
             return Response({'error': 'category_id requerido'}, status=status.HTTP_400_BAD_REQUEST)
         
         try:
-            category = ProductCategory.objects.get(id=category_id)
+            category = CategoriaProducto.objects.get(id=category_id)
             prefix = category.code.upper()[:3]
-            last_product = Product.objects.filter(sku__startswith=prefix).order_by('-id').first()
+            last_product = Producto.objects.filter(sku__startswith=prefix).order_by('-id').first()
             
             if last_product:
                 try:
@@ -111,7 +111,7 @@ class ProductViewSet(viewsets.ModelViewSet):
             new_sku = f"{prefix}-{new_number:03d}"
             return Response({'sku': new_sku})
             
-        except ProductCategory.DoesNotExist:
+        except CategoriaProducto.DoesNotExist:
             return Response({'error': 'Categoría no encontrada'}, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=True, methods=['post'])
@@ -123,7 +123,7 @@ class ProductViewSet(viewsets.ModelViewSet):
         
         try:
             if price_list_id:
-                price_rule = PriceListRule.objects.get(
+                price_rule = ReglaListaPrecios.objects.get(
                     product=product,
                     price_list_id=price_list_id
                 )
@@ -146,7 +146,7 @@ class ProductViewSet(viewsets.ModelViewSet):
                 'area_m2': (float(width_mm) / 1000) * (float(height_mm) / 1000) if width_mm and height_mm else None
             })
             
-        except PriceListRule.DoesNotExist:
+        except ReglaListaPrecios.DoesNotExist:
             return Response(
                 {'error': 'No se encontró regla de precio para esta lista'},
                 status=status.HTTP_404_NOT_FOUND
@@ -158,45 +158,45 @@ class ProductViewSet(viewsets.ModelViewSet):
             )
 
 
-class ProductCategoryViewSet(viewsets.ModelViewSet):
-    queryset = ProductCategory.objects.select_related('parent').filter(is_active=True)
-    serializer_class = ProductCategorySerializer
+class CategoriaProductoViewSet(viewsets.ModelViewSet):
+    queryset = CategoriaProducto.objects.select_related('parent').filter(is_active=True)
+    serializer_class = CategoriaProductoSerializer
     permission_classes = []  # Temporalmente sin permisos
     ordering = ['name']
     
     @action(detail=True, methods=['get'])
     def subcategories(self, request, pk=None):
         category = self.get_object()
-        subcategories = Product.SUBCATEGORY_CHOICES.get(category.code, [])
+        subcategories = Producto.SUBCATEGORY_CHOICES.get(category.code, [])
         return Response({
             'subcategories': [{'value': key, 'label': value} for key, value in subcategories]
         })
 
 
-class UoMViewSet(viewsets.ModelViewSet):
-    queryset = UoM.objects.filter(is_active=True)
-    serializer_class = UoMSerializer
+class UnidadMedidaViewSet(viewsets.ModelViewSet):
+    queryset = UnidadMedida.objects.filter(is_active=True)
+    serializer_class = UnidadMedidaSerializer
     permission_classes = []  # Temporalmente sin permisos
     ordering = ['name']
 
 
-class TaxRateViewSet(viewsets.ModelViewSet):
-    queryset = TaxRate.objects.all()
-    serializer_class = TaxRateSerializer
+class TasaImpuestoViewSet(viewsets.ModelViewSet):
+    queryset = TasaImpuesto.objects.all()
+    serializer_class = TasaImpuestoSerializer
     permission_classes = []  # Temporalmente sin permisos
     ordering = ['name']
 
 
-class PriceListViewSet(viewsets.ModelViewSet):
-    queryset = PriceList.objects.all()
-    serializer_class = PriceListSerializer
+class ListaPreciosViewSet(viewsets.ModelViewSet):
+    queryset = ListaPrecios.objects.all()
+    serializer_class = ListaPreciosSerializer
     permission_classes = [IsAuthenticated]
     ordering = ['name']
 
 
-class PriceListRuleViewSet(viewsets.ModelViewSet):
-    queryset = PriceListRule.objects.select_related('price_list', 'product')
-    serializer_class = PriceListRuleSerializer
+class ReglaListaPreciosViewSet(viewsets.ModelViewSet):
+    queryset = ReglaListaPrecios.objects.select_related('price_list', 'product')
+    serializer_class = ReglaListaPreciosSerializer
     permission_classes = [IsAuthenticated]
     
     def get_queryset(self):

@@ -5,7 +5,7 @@ from decimal import Decimal
 import uuid
 
 
-class Quote(models.Model):
+class Presupuesto(models.Model):
     """Presupuesto"""
     STATUS_CHOICES = [
         ('DRAFT', 'Borrador'),
@@ -29,8 +29,8 @@ class Quote(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     # Relaciones
-    customer = models.ForeignKey('crm.Customer', on_delete=models.PROTECT, related_name='quotes')
-    price_list = models.ForeignKey('catalog.PriceList', on_delete=models.PROTECT, null=True, blank=True)
+    customer = models.ForeignKey('crm.Cliente', on_delete=models.PROTECT, related_name='quotes')
+    price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_quotes')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_quotes')
     
@@ -66,7 +66,7 @@ class Quote(models.Model):
     def save(self, *args, **kwargs):
         if not self.number:
             # Generar número correlativo
-            last_quote = Quote.objects.order_by('-id').first()
+            last_quote = Presupuesto.objects.order_by('-id').first()
             if last_quote and last_quote.number:
                 try:
                     last_number = int(last_quote.number.split('-')[1])
@@ -82,9 +82,9 @@ class Quote(models.Model):
     def calculate_totals(self):
         """Recalcular totales del presupuesto"""
         items = self.items.all()
-        self.subtotal = sum(item.total for item in items)
+        self.subtotal = sum(item.subtotal for item in items)
         self.tax_amount = sum(item.tax_amount for item in items)
-        self.total = self.subtotal + self.tax_amount - self.discount_amount
+        self.total = sum(item.total for item in items) - self.discount_amount
         self.save(update_fields=['subtotal', 'tax_amount', 'total'])
     
     def can_convert_to_order(self):
@@ -95,10 +95,10 @@ class Quote(models.Model):
         return f"{self.number} - {self.customer.name}"
 
 
-class QuoteItem(models.Model):
+class LineaPresupuesto(models.Model):
     """Línea de presupuesto"""
-    quote = models.ForeignKey(Quote, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('catalog.Product', on_delete=models.PROTECT, null=True, blank=True)
+    quote = models.ForeignKey(Presupuesto, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT, null=True, blank=True)
     
     # Especificaciones del producto
     description = models.TextField(blank=True)  # Descripción personalizada
@@ -130,12 +130,16 @@ class QuoteItem(models.Model):
         unique_together = ('quote', 'line_number')
     
     def save(self, *args, **kwargs):
-        # Calcular totales
-        self.subtotal = self.quantity * self.unit_price
-        self.discount_amount = self.subtotal * (self.discount_pct / 100)
-        taxable_amount = self.subtotal - self.discount_amount
-        self.tax_amount = taxable_amount * (self.tax_rate / 100)
-        self.total = taxable_amount + self.tax_amount
+        # El unit_price incluye IVA, calcular subtotal sin IVA
+        total_with_tax = self.quantity * self.unit_price
+        self.discount_amount = total_with_tax * (self.discount_pct / 100)
+        total_after_discount = total_with_tax - self.discount_amount
+        
+        # Calcular subtotal (sin IVA) y tax_amount
+        tax_factor = 1 + (self.tax_rate / 100)
+        self.subtotal = total_after_discount / tax_factor
+        self.tax_amount = total_after_discount - self.subtotal
+        self.total = total_after_discount
         
         super().save(*args, **kwargs)
         
@@ -151,7 +155,7 @@ class QuoteItem(models.Model):
         return f"{self.quote.number} - Línea {self.line_number}"
 
 
-class Order(models.Model):
+class Pedido(models.Model):
     """Pedido/Venta"""
     STATUS_CHOICES = [
         ('PENDING', 'Pendiente'),
@@ -179,9 +183,9 @@ class Order(models.Model):
     uuid = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
     
     # Relaciones
-    customer = models.ForeignKey('crm.Customer', on_delete=models.PROTECT, related_name='orders')
-    quote = models.ForeignKey(Quote, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
-    price_list = models.ForeignKey('catalog.PriceList', on_delete=models.PROTECT, null=True, blank=True)
+    customer = models.ForeignKey('crm.Cliente', on_delete=models.PROTECT, related_name='orders')
+    quote = models.ForeignKey(Presupuesto, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
+    price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_orders')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_orders')
     
@@ -223,7 +227,7 @@ class Order(models.Model):
     def save(self, *args, **kwargs):
         if not self.number:
             # Generar número correlativo
-            last_order = Order.objects.order_by('-id').first()
+            last_order = Pedido.objects.order_by('-id').first()
             if last_order and last_order.number:
                 try:
                     last_number = int(last_order.number.split('-')[1])
@@ -239,9 +243,9 @@ class Order(models.Model):
     def calculate_totals(self):
         """Recalcular totales del pedido"""
         items = self.items.all()
-        self.subtotal = sum(item.total for item in items)
+        self.subtotal = sum(item.subtotal for item in items)
         self.tax_amount = sum(item.tax_amount for item in items)
-        self.total = self.subtotal + self.tax_amount - self.discount_amount
+        self.total = sum(item.total for item in items) - self.discount_amount
         self.save(update_fields=['subtotal', 'tax_amount', 'total'])
     
     @classmethod
@@ -264,7 +268,7 @@ class Order(models.Model):
         
         # Copiar líneas del presupuesto
         for quote_item in quote.items.all():
-            OrderItem.objects.create(
+            LineaPedido.objects.create(
                 order=order,
                 product=quote_item.product,
                 description=quote_item.description,
@@ -287,10 +291,10 @@ class Order(models.Model):
         return f"{self.number} - {self.customer.name}"
 
 
-class OrderItem(models.Model):
+class LineaPedido(models.Model):
     """Línea de pedido"""
-    order = models.ForeignKey(Order, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('catalog.Product', on_delete=models.PROTECT)
+    order = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
+    product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT)
     
     # Especificaciones del producto
     description = models.TextField(blank=True)
@@ -324,12 +328,16 @@ class OrderItem(models.Model):
         unique_together = ('order', 'line_number')
     
     def save(self, *args, **kwargs):
-        # Calcular totales (igual que QuoteItem)
-        self.subtotal = self.quantity * self.unit_price
-        self.discount_amount = self.subtotal * (self.discount_pct / 100)
-        taxable_amount = self.subtotal - self.discount_amount
-        self.tax_amount = taxable_amount * (self.tax_rate / 100)
-        self.total = taxable_amount + self.tax_amount
+        # El unit_price incluye IVA, calcular subtotal sin IVA
+        total_with_tax = self.quantity * self.unit_price
+        self.discount_amount = total_with_tax * (self.discount_pct / 100)
+        total_after_discount = total_with_tax - self.discount_amount
+        
+        # Calcular subtotal (sin IVA) y tax_amount
+        tax_factor = 1 + (self.tax_rate / 100)
+        self.subtotal = total_after_discount / tax_factor
+        self.tax_amount = total_after_discount - self.subtotal
+        self.total = total_after_discount
         
         super().save(*args, **kwargs)
         

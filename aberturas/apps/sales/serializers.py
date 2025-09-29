@@ -1,16 +1,16 @@
 from rest_framework import serializers
-from .models import Quote, QuoteItem, Order, OrderItem
-from apps.crm.serializers import CustomerSerializer
-from apps.catalog.serializers import ProductSerializer
+from .models import Presupuesto, LineaPresupuesto, Pedido, LineaPedido
+from apps.crm.serializers import ClienteSerializer
+from apps.catalog.serializers import ProductoSerializer
 
 
-class QuoteItemSerializer(serializers.ModelSerializer):
+class LineaPresupuestoSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
     
     class Meta:
-        model = QuoteItem
+        model = LineaPresupuesto
         fields = [
             'id', 'quote', 'product', 'product_name', 'product_sku',
             'description', 'width_mm', 'height_mm',
@@ -30,14 +30,14 @@ class QuoteItemSerializer(serializers.ModelSerializer):
         return data
 
 
-class QuoteSerializer(serializers.ModelSerializer):
+class PresupuestoSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
-    items = QuoteItemSerializer(many=True, read_only=True)
+    items = LineaPresupuestoSerializer(many=True, read_only=True)
     items_count = serializers.IntegerField(source='items.count', read_only=True)
     
     class Meta:
-        model = Quote
+        model = Presupuesto
         fields = [
             'id', 'number', 'uuid', 'customer', 'customer_name',
             'price_list', 'created_by', 'created_by_name', 'assigned_to',
@@ -56,19 +56,19 @@ class QuoteSerializer(serializers.ModelSerializer):
         return super().create(validated_data)
 
 
-class QuoteDetailSerializer(QuoteSerializer):
-    customer = CustomerSerializer(read_only=True)
+class PresupuestoDetailSerializer(PresupuestoSerializer):
+    customer = ClienteSerializer(read_only=True)
     
-    class Meta(QuoteSerializer.Meta):
+    class Meta(PresupuestoSerializer.Meta):
         pass
 
 
-class OrderItemSerializer(serializers.ModelSerializer):
+class LineaPedidoSerializer(serializers.ModelSerializer):
     product_name = serializers.CharField(source='product.name', read_only=True)
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     
     class Meta:
-        model = OrderItem
+        model = LineaPedido
         fields = [
             'id', 'product', 'product_name', 'product_sku',
             'description', 'width_mm', 'height_mm',
@@ -79,15 +79,15 @@ class OrderItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['subtotal', 'discount_amount', 'tax_amount', 'total']
 
 
-class OrderSerializer(serializers.ModelSerializer):
+class PedidoSerializer(serializers.ModelSerializer):
     customer_name = serializers.CharField(source='customer.name', read_only=True)
     created_by_name = serializers.CharField(source='created_by.get_full_name', read_only=True)
     quote_number = serializers.CharField(source='quote.number', read_only=True)
-    items = OrderItemSerializer(many=True, read_only=True)
+    items = LineaPedidoSerializer(many=True, read_only=True)
     items_count = serializers.IntegerField(source='items.count', read_only=True)
     
     class Meta:
-        model = Order
+        model = Pedido
         fields = [
             'id', 'number', 'uuid', 'customer', 'customer_name',
             'quote', 'quote_number', 'price_list',
@@ -102,8 +102,8 @@ class OrderSerializer(serializers.ModelSerializer):
         read_only_fields = ['number', 'uuid', 'order_date', 'subtotal', 'tax_amount', 'total', 'created_at', 'updated_at']
 
 
-class OrderDetailSerializer(OrderSerializer):
-    customer = CustomerSerializer(read_only=True)
+class PedidoDetailSerializer(PedidoSerializer):
+    customer = ClienteSerializer(read_only=True)
     
-    class Meta(OrderSerializer.Meta):
+    class Meta(PedidoSerializer.Meta):
         pass
