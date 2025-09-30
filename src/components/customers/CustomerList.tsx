@@ -73,38 +73,40 @@ const CustomerList: React.FC = () => {
   return (
     <>
       {/* Top Header */}
-      <header className="bg-white shadow-sm border-b px-6 py-4">
-        <h2 className="text-2xl font-bold text-gray-900">Clientes</h2>
-        <p className="text-gray-600">Gestión de clientes y contactos</p>
+      <header className="bg-white shadow-sm border-b px-4 lg:px-6 py-4">
+        <div className="ml-12 lg:ml-0">
+          <h2 className="text-xl lg:text-2xl font-bold text-gray-900">Clientes</h2>
+          <p className="text-sm lg:text-base text-gray-600">Gestión de clientes y contactos</p>
+        </div>
       </header>
       
       {/* Content Area */}
-      <main className="flex-1 overflow-y-auto p-6">
+      <main className="flex-1 overflow-y-auto p-4 lg:p-6">
         {/* Header */}
-        <div className="flex justify-between items-center mb-6">
-        <div className="flex gap-2">
-          <button className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-            <Upload className="w-4 h-4 mr-2" />
-            Importar
-          </button>
-          <button className="flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
-            <Download className="w-4 h-4 mr-2" />
-            Exportar
-          </button>
-          <button 
-            onClick={() => window.location.hash = '/clientes/nuevo'}
-            className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
-          >
-            <Plus className="w-4 h-4 mr-2" />
-            Nuevo Cliente
-          </button>
+        <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 mb-6">
+          <div className="flex flex-col sm:flex-row gap-2">
+            <button className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <Upload className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Importar</span>
+            </button>
+            <button className="flex items-center justify-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+              <Download className="w-4 h-4 mr-2" />
+              <span className="hidden sm:inline">Exportar</span>
+            </button>
+            <button 
+              onClick={() => window.location.hash = '/clientes/nuevo'}
+              className="flex items-center justify-center px-4 py-2 bg-blue-600 text-white rounded-md text-sm font-medium hover:bg-blue-700"
+            >
+              <Plus className="w-4 h-4 mr-2" />
+              Nuevo Cliente
+            </button>
+          </div>
         </div>
-      </div>
 
       {/* Filters */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6">
         <div className="p-4">
-          <div className="flex flex-wrap gap-4">
+          <div className="flex flex-col sm:flex-row gap-3 sm:gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
               <input
@@ -143,8 +145,8 @@ const CustomerList: React.FC = () => {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+      {/* Desktop Table */}
+      <div className="hidden lg:block bg-white rounded-lg shadow-sm border border-gray-200">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
@@ -201,6 +203,54 @@ const CustomerList: React.FC = () => {
             </tbody>
           </table>
         </div>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="lg:hidden space-y-4">
+        {customers.map((customer) => (
+          <div key={customer.id} className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <div className="flex justify-between items-start mb-3">
+              <div>
+                <h3 className="text-sm font-medium text-gray-900">{customer.name}</h3>
+                <p className="text-xs text-gray-500 font-mono">{customer.code}</p>
+                {customer.etiqueta_name && (
+                  <p className="text-xs text-blue-600 mt-1">{customer.etiqueta_name}</p>
+                )}
+              </div>
+              <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(customer.status)}`}>
+                {customer.status}
+              </span>
+            </div>
+            
+            <div className="space-y-2 text-sm text-gray-600">
+              {customer.email && (
+                <p><span className="font-medium">Email:</span> {customer.email}</p>
+              )}
+              {customer.direccion_completa && (
+                <p><span className="font-medium">Dirección:</span> {customer.direccion_completa}</p>
+              )}
+            </div>
+            
+            <div className="flex gap-2 mt-4 pt-3 border-t border-gray-100">
+              <button 
+                onClick={() => window.location.hash = `/clientes/${customer.id}`}
+                className="flex-1 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 rounded-md hover:bg-blue-100"
+              >
+                Ver
+              </button>
+              <button 
+                onClick={() => {
+                  if (window.confirm('¿Estás seguro de que quieres editar este cliente?')) {
+                    window.location.hash = `/clientes/${customer.id}/editar`;
+                  }
+                }}
+                className="flex-1 px-3 py-2 text-xs font-medium text-indigo-600 bg-indigo-50 rounded-md hover:bg-indigo-100"
+              >
+                Editar
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
         {customers.length === 0 && (

@@ -2,8 +2,14 @@ from rest_framework import viewsets, filters
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import CategoriaProducto, SubcategoriaProducto, Producto
-from .serializers import CategoriaProductoSerializer, SubcategoriaProductoSerializer
+from .models import (
+    CategoriaProducto, SubcategoriaProducto, Producto,
+    MedidaProducto, ColorProducto, LineaProducto
+)
+from .serializers import (
+    CategoriaProductoSerializer, SubcategoriaProductoSerializer, ProductoSerializer,
+    MedidaProductoSerializer, ColorProductoSerializer, LineaProductoSerializer
+)
 
 class CategoriaProductoViewSet(viewsets.ModelViewSet):
     queryset = CategoriaProducto.objects.prefetch_related('subcategories')
@@ -52,3 +58,35 @@ class SubcategoriaProductoViewSet(viewsets.ModelViewSet):
         if category_id:
             queryset = queryset.filter(category_id=category_id)
         return queryset
+
+class MedidaProductoViewSet(viewsets.ModelViewSet):
+    queryset = MedidaProducto.objects.all()
+    serializer_class = MedidaProductoSerializer
+    permission_classes = []
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering = ['name']
+
+class ColorProductoViewSet(viewsets.ModelViewSet):
+    queryset = ColorProducto.objects.all()
+    serializer_class = ColorProductoSerializer
+    permission_classes = []
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering = ['name']
+
+class LineaProductoViewSet(viewsets.ModelViewSet):
+    queryset = LineaProducto.objects.all()
+    serializer_class = LineaProductoSerializer
+    permission_classes = []
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['name', 'code']
+    ordering = ['name']
+
+class ProductoViewSet(viewsets.ModelViewSet):
+    queryset = Producto.objects.select_related('category', 'medida', 'color', 'linea')
+    serializer_class = ProductoSerializer
+    permission_classes = []
+    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
+    search_fields = ['sku', 'medida__name', 'color__name', 'linea__name']
+    ordering = ['sku']

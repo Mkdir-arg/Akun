@@ -42,7 +42,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
   };
 
   return (
-    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 pb-32 overflow-hidden">
+    <div className="relative min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 px-4 pb-32 overflow-hidden">
       <img
         src="/login-wave.svg"
         alt=""
@@ -50,18 +50,18 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         className="absolute inset-x-0 bottom-0 w-full max-w-none pointer-events-none select-none"
       />
       <div className="relative w-full max-w-md z-10">
-        <div className="relative bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-8 border border-white/20">
+        <div className="relative bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-6 sm:p-8 border border-white/20">
           {/* Header */}
           <div className="text-center mb-8">
-            <div className="w-28 h-28 mx-auto mb-4 flex items-center justify-center">
+            <div className="w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 flex items-center justify-center">
               <img 
                 src="/AKUN-LOGO.webp" 
                 alt="AKUN Logo" 
                 className="w-full h-full object-contain"
               />
             </div>
-            <h1 className="text-3xl font-bold text-gray-800 mb-2">Bienvenido a AKUN</h1>
-            <p className="text-gray-600">Ingresa a tu cuenta</p>
+            <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Bienvenido a AKUN</h1>
+            <p className="text-sm sm:text-base text-gray-600">Ingresa a tu cuenta</p>
             {error && (
               <div className="text-sm text-red-600 mt-2 p-2 bg-red-50 rounded">
                 {error}
@@ -79,7 +79,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Correo electrónico"
-                className="w-full pl-12 pr-4 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50/50"
+                className="w-full pl-12 pr-4 py-3 sm:py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 text-sm sm:text-base"
                 required
               />
             </div>
@@ -92,7 +92,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Contraseña"
-                className="w-full pl-12 pr-12 py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50/50"
+                className="w-full pl-12 pr-12 py-3 sm:py-4 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 bg-gray-50/50 text-sm sm:text-base"
                 required
               />
               <button
@@ -119,7 +119,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-4 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed"
+              className="w-full bg-gradient-to-r from-blue-500 to-purple-600 text-white py-3 sm:py-4 rounded-2xl font-semibold hover:from-blue-600 hover:to-purple-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 transition-all duration-200 disabled:opacity-70 disabled:cursor-not-allowed text-sm sm:text-base"
             >
               {isLoading ? (
                 <div className="flex items-center justify-center">

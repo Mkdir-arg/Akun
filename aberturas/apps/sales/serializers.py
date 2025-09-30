@@ -5,8 +5,13 @@ from apps.catalog.serializers import ProductoSerializer
 
 
 class LineaPresupuestoSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_name = serializers.SerializerMethodField()
     product_sku = serializers.CharField(source='product.sku', read_only=True)
+    
+    def get_product_name(self, obj):
+        if obj.product:
+            return f"{obj.product.medida.name} {obj.product.color.name} {obj.product.linea.name}"
+        return ""
     assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
     
     class Meta:
@@ -64,8 +69,13 @@ class PresupuestoDetailSerializer(PresupuestoSerializer):
 
 
 class LineaPedidoSerializer(serializers.ModelSerializer):
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_name = serializers.SerializerMethodField()
     product_sku = serializers.CharField(source='product.sku', read_only=True)
+    
+    def get_product_name(self, obj):
+        if obj.product:
+            return f"{obj.product.medida.name} {obj.product.color.name} {obj.product.linea.name}"
+        return ""
     
     class Meta:
         model = LineaPedido

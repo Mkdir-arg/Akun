@@ -63,7 +63,7 @@ const GeographicInputs: React.FC<GeographicInputsProps> = ({
       let url = 'https://z5906h8z-8002.brs.devtunnels.ms/api/municipios/';
       const params = [];
       if (search) params.push(`search=${search}`);
-      if (provinciaId) params.push(`provincia=${provinciaId}`);
+      if (provinciaId) params.push(`provincia_id=${provinciaId}`);
       if (params.length > 0) url += `?${params.join('&')}`;
       
       const response = await fetch(url);
@@ -80,7 +80,7 @@ const GeographicInputs: React.FC<GeographicInputsProps> = ({
       let url = 'https://z5906h8z-8002.brs.devtunnels.ms/api/localidades/';
       const params = [];
       if (search) params.push(`search=${search}`);
-      if (municipioId) params.push(`municipio=${municipioId}`);
+      if (municipioId) params.push(`municipio_id=${municipioId}`);
       if (params.length > 0) url += `?${params.join('&')}`;
       
       const response = await fetch(url);
@@ -107,8 +107,12 @@ const GeographicInputs: React.FC<GeographicInputsProps> = ({
     console.log('Selecting provincia:', p.nombre);
     onProvinciaChange(p.nombre);
     setShowProvincias(false);
+    setShowMunicipios(false);
+    setShowLocalidades(false);
     onMunicipioChange('');
     onLocalidadChange('');
+    setMunicipios([]);
+    setLocalidades([]);
   };
 
   const handleMunicipioClick = () => {
@@ -127,7 +131,9 @@ const GeographicInputs: React.FC<GeographicInputsProps> = ({
   const handleMunicipioSelect = (m: Municipio) => {
     onMunicipioChange(m.nombre);
     setShowMunicipios(false);
+    setShowLocalidades(false);
     onLocalidadChange('');
+    setLocalidades([]);
   };
 
   const handleLocalidadClick = () => {

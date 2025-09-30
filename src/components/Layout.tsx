@@ -1,5 +1,5 @@
-import React from 'react';
-import { LogOut, Users, ShoppingCart, Package, Home as HomeIcon, FileText, Settings, BarChart3 } from 'lucide-react';
+import React, { useState } from 'react';
+import { LogOut, Users, ShoppingCart, Package, Home as HomeIcon, FileText, Settings, BarChart3, Menu, X } from 'lucide-react';
 
 interface User {
   id: number;
@@ -16,6 +16,7 @@ interface LayoutProps {
 }
 
 const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }) => {
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const handleLogout = async () => {
     try {
       await fetch(`${process.env.REACT_APP_API_URL}/api/logout/`, {
@@ -42,8 +43,18 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }
 
   return (
     <div className="flex h-screen bg-gray-50">
+      {/* Mobile menu button */}
+      <div className="lg:hidden fixed top-4 left-4 z-50">
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="p-2 rounded-md bg-white shadow-lg text-gray-600 hover:text-gray-900"
+        >
+          {sidebarOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+        </button>
+      </div>
+
       {/* Sidebar */}
-      <div className="w-64 bg-white shadow-lg flex flex-col">
+      <div className={`${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0 fixed lg:static inset-y-0 left-0 z-40 w-64 bg-white shadow-lg flex flex-col transition-transform duration-300 ease-in-out`}>
         {/* Logo */}
         <div className="p-6 border-b text-center">
           <img 
@@ -63,7 +74,10 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }
               return (
                 <li key={index}>
                   <button 
-                    onClick={() => window.location.hash = item.path}
+                    onClick={() => {
+                      window.location.hash = item.path;
+                      setSidebarOpen(false);
+                    }}
                     className={`w-full flex items-center px-3 py-2 text-left rounded-lg transition-colors ${
                       isActive 
                         ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-700' 
@@ -103,8 +117,16 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }
         </div>
       </div>
 
+      {/* Overlay */}
+      {sidebarOpen && (
+        <div 
+          className="lg:hidden fixed inset-0 z-30 bg-black bg-opacity-50" 
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden lg:ml-0">
         {children}
       </div>
     </div>

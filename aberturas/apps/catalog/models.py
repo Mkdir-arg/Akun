@@ -4,6 +4,47 @@ from django.db.models import Q
 from decimal import Decimal
 
 
+class MedidaProducto(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Medida de Producto'
+        verbose_name_plural = 'Medidas de Producto'
+        
+    def __str__(self):
+        return self.name
+
+
+class ColorProducto(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    hex_color = models.CharField(max_length=7, blank=True, help_text='Color en formato hexadecimal (#FFFFFF)')
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Color de Producto'
+        verbose_name_plural = 'Colores de Producto'
+        
+    def __str__(self):
+        return self.name
+
+
+class LineaProducto(models.Model):
+    name = models.CharField(max_length=100, unique=True)
+    code = models.CharField(max_length=20, unique=True)
+    description = models.TextField(blank=True)
+    is_active = models.BooleanField(default=True)
+    
+    class Meta:
+        verbose_name = 'Línea de Producto'
+        verbose_name_plural = 'Líneas de Producto'
+        
+    def __str__(self):
+        return self.name
+
+
 class UnidadMedida(models.Model):
     CATEGORY_CHOICES = [
         ('length', 'Longitud'),
@@ -140,14 +181,14 @@ class Producto(models.Model):
     }
     
     sku = models.CharField(max_length=50, unique=True, db_index=True)
-    name = models.CharField(max_length=200, db_index=True)
     category = models.ForeignKey(CategoriaProducto, on_delete=models.PROTECT)
     subcategory = models.CharField(max_length=100, blank=True, null=True)
-    uom = models.ForeignKey(UnidadMedida, on_delete=models.PROTECT, default=1)
     material = models.CharField(max_length=20, choices=MATERIAL_CHOICES)
     opening_type = models.CharField(max_length=20, choices=OPENING_TYPE_CHOICES)
     glass_type = models.CharField(max_length=20, choices=GLASS_TYPE_CHOICES, blank=True)
-    color_code = models.CharField(max_length=20, blank=True)
+    medida = models.ForeignKey(MedidaProducto, on_delete=models.PROTECT, default=1)
+    color = models.ForeignKey(ColorProducto, on_delete=models.PROTECT, default=1)
+    linea = models.ForeignKey(LineaProducto, on_delete=models.PROTECT, default=1)
     width_mm = models.PositiveIntegerField(null=True, blank=True)
     height_mm = models.PositiveIntegerField(null=True, blank=True)
     weight_kg = models.DecimalField(max_digits=8, decimal_places=3, null=True, blank=True)
@@ -165,8 +206,8 @@ class Producto(models.Model):
         verbose_name_plural = 'Productos'
         indexes = [
             models.Index(fields=['sku']),
-            models.Index(fields=['name']),
             models.Index(fields=['category', 'material', 'opening_type']),
+            models.Index(fields=['medida', 'color', 'linea']),
         ]
         
     def clean(self):
@@ -184,7 +225,7 @@ class Producto(models.Model):
         super().save(*args, **kwargs)
         
     def __str__(self):
-        return f"{self.sku} - {self.name}"
+        return f"{self.sku} - {self.medida.name} {self.color.name} {self.linea.name}"
 
 
 class ListaPrecios(models.Model):

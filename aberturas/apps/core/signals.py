@@ -20,11 +20,11 @@ def log_customer_delete(sender, instance, **kwargs):
 @receiver(post_save, sender=Producto)
 def log_product_save(sender, instance, created, **kwargs):
     action = "🆕 CREADO" if created else "📝 ACTUALIZADO"
-    logger.info(f"📦 Producto {action}: {instance.sku} - {instance.name}")
+    logger.info(f"📦 Producto {action}: {instance.sku}")
 
 @receiver(post_delete, sender=Producto)
 def log_product_delete(sender, instance, **kwargs):
-    logger.info(f"🗑️ Producto ELIMINADO: {instance.sku} - {instance.name}")
+    logger.info(f"🗑️ Producto ELIMINADO: {instance.sku}")
 
 @receiver(post_save, sender=ListaPrecios)
 def log_pricelist_save(sender, instance, created, **kwargs):

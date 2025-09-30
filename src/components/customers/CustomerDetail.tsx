@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Edit, Phone, Mail, MapPin, User, FileText, Paperclip, ShoppingCart } from 'lucide-react';
+import GoogleMap from '../common/GoogleMap';
 
 interface Customer {
   id: number;
@@ -16,6 +17,14 @@ interface Customer {
   customer_notes: any[];
   files: any[];
   tags: any[];
+  provincia?: string;
+  municipio?: string;
+  localidad?: string;
+  calle?: string;
+  numero?: string;
+  codigo_postal?: string;
+  latitud?: number;
+  longitud?: number;
 }
 
 interface CustomerDetailProps {
@@ -117,7 +126,7 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({ customerId, onBack, onE
                 <span className="px-2 py-1 text-xs font-semibold rounded-full bg-purple-100 text-purple-800">
                   {customer.type}
                 </span>
-                {customer.tags.map((tag: any) => (
+                {customer.tags && customer.tags.map((tag: any) => (
                   <span
                     key={tag.id}
                     className="px-2 py-1 text-xs font-semibold rounded-full text-white"
@@ -261,29 +270,89 @@ const CustomerDetail: React.FC<CustomerDetailProps> = ({ customerId, onBack, onE
           )}
 
           {activeTab === 'addresses' && (
-            <div className="space-y-4">
-              {customer.addresses.map((address: any) => (
-                <div key={address.id} className="bg-white rounded-lg shadow p-6">
-                  <div className="flex justify-between items-start">
-                    <div>
-                      <div className="flex items-center mb-2">
-                        <h4 className="font-medium">{address.kind}</h4>
-                        {address.is_default && (
-                          <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
-                            Por defecto
-                          </span>
-                        )}
+            <div className="space-y-6">
+              {/* Información de Domicilio */}
+              <div className="bg-white rounded-lg shadow p-6">
+                <h3 className="text-lg font-medium mb-4">Información de Domicilio</h3>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <div className="space-y-3">
+                    {customer.provincia && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Provincia</dt>
+                        <dd className="text-sm text-gray-900">{customer.provincia}</dd>
                       </div>
-                      <p className="text-gray-600">
-                        {address.street} {address.number}
-                      </p>
-                      <p className="text-gray-600">
-                        {address.city}, {address.province} ({address.postal_code})
-                      </p>
-                    </div>
+                    )}
+                    {customer.municipio && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Municipio</dt>
+                        <dd className="text-sm text-gray-900">{customer.municipio}</dd>
+                      </div>
+                    )}
+                    {customer.localidad && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Localidad</dt>
+                        <dd className="text-sm text-gray-900">{customer.localidad}</dd>
+                      </div>
+                    )}
+                    {customer.calle && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Calle</dt>
+                        <dd className="text-sm text-gray-900">{customer.calle} {customer.numero}</dd>
+                      </div>
+                    )}
+                    {customer.codigo_postal && (
+                      <div>
+                        <dt className="text-sm font-medium text-gray-500">Código Postal</dt>
+                        <dd className="text-sm text-gray-900">{customer.codigo_postal}</dd>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <dt className="text-sm font-medium text-gray-500 mb-3">Ubicación en el Mapa</dt>
+                    <GoogleMap
+                      calle={customer.calle}
+                      numero={customer.numero}
+                      localidad={customer.localidad}
+                      municipio={customer.municipio}
+                      provincia={customer.provincia}
+                      latitud={customer.latitud}
+                      longitud={customer.longitud}
+                      height="250px"
+                    />
                   </div>
                 </div>
-              ))}
+              </div>
+              
+              {/* Direcciones Adicionales */}
+              {customer.addresses && customer.addresses.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-medium mb-4">Direcciones Adicionales</h3>
+                  <div className="space-y-4">
+                    {customer.addresses.map((address: any) => (
+                      <div key={address.id} className="bg-white rounded-lg shadow p-6">
+                        <div className="flex justify-between items-start">
+                          <div>
+                            <div className="flex items-center mb-2">
+                              <h4 className="font-medium">{address.kind}</h4>
+                              {address.is_default && (
+                                <span className="ml-2 px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded">
+                                  Por defecto
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-gray-600">
+                              {address.street} {address.number}
+                            </p>
+                            <p className="text-gray-600">
+                              {address.city}, {address.province} ({address.postal_code})
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
 

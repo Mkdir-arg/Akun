@@ -7,6 +7,10 @@ from . import views
 router = DefaultRouter()
 router.register(r'categories', views.CategoriaProductoViewSet)
 router.register(r'subcategories', views.SubcategoriaProductoViewSet)
+router.register(r'products', views.ProductoViewSet)
+router.register(r'medidas', views.MedidaProductoViewSet)
+router.register(r'colores', views.ColorProductoViewSet)
+router.register(r'lineas', views.LineaProductoViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),

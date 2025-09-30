@@ -12,14 +12,14 @@ class MonedaAdmin(admin.ModelAdmin):
 
 @admin.register(Provincia)
 class ProvinciaAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'created_at']
+    list_display = ['nombre']
     search_fields = ['nombre']
     ordering = ['nombre']
 
 
 @admin.register(Municipio)
 class MunicipioAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'provincia', 'created_at']
+    list_display = ['nombre', 'provincia']
     list_filter = ['provincia']
     search_fields = ['nombre', 'provincia__nombre']
     ordering = ['provincia__nombre', 'nombre']
@@ -27,7 +27,7 @@ class MunicipioAdmin(admin.ModelAdmin):
 
 @admin.register(Localidad)
 class LocalidadAdmin(admin.ModelAdmin):
-    list_display = ['nombre', 'municipio', 'get_provincia', 'created_at']
+    list_display = ['nombre', 'municipio', 'get_provincia']
     list_filter = ['municipio__provincia']
     search_fields = ['nombre', 'municipio__nombre', 'municipio__provincia__nombre']
     ordering = ['municipio__provincia__nombre', 'municipio__nombre', 'nombre']

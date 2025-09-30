@@ -14,8 +14,6 @@ class Moneda(models.Model):
     )
     is_default = models.BooleanField(default=False, help_text="Moneda por defecto del sistema")
     is_active = models.BooleanField(default=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Moneda"
@@ -34,8 +32,6 @@ class Moneda(models.Model):
 
 class Provincia(models.Model):
     nombre = models.CharField(max_length=100, unique=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Provincia"
@@ -49,8 +45,6 @@ class Provincia(models.Model):
 class Municipio(models.Model):
     nombre = models.CharField(max_length=100)
     provincia = models.ForeignKey(Provincia, on_delete=models.CASCADE, related_name='municipios')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Municipio"
@@ -65,8 +59,6 @@ class Municipio(models.Model):
 class Localidad(models.Model):
     nombre = models.CharField(max_length=100)
     municipio = models.ForeignKey(Municipio, on_delete=models.CASCADE, related_name='localidades')
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
         verbose_name = "Localidad"
