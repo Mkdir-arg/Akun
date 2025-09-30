@@ -5,5 +5,4 @@ from .models import Moneda
 class MonedaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Moneda
-        fields = ['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default', 'is_active', 'created_at']
-        read_only_fields = ['created_at']
+        fields = ['id', 'code', 'name', 'symbol', 'exchange_rate', 'is_default', 'is_active']

@@ -69,16 +69,16 @@ class LineaProductoAdmin(admin.ModelAdmin):
 
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
-    list_display = ('sku', 'medida', 'color', 'linea', 'category', 'material', 'opening_type', 'pricing_method', 'is_active')
-    list_filter = ('category', 'material', 'opening_type', 'pricing_method', 'is_active', 'is_service', 'medida', 'color', 'linea')
-    search_fields = ('sku', 'medida__name', 'color__name', 'linea__name')
-    list_select_related = ('category', 'tax', 'medida', 'color', 'linea')
+    list_display = ('sku', 'color', 'linea', 'category', 'material', 'opening_type', 'pricing_method', 'is_active')
+    list_filter = ('category', 'material', 'opening_type', 'pricing_method', 'is_active', 'is_service', 'color', 'linea')
+    search_fields = ('sku', 'color__name', 'linea__name')
+    list_select_related = ('category', 'tax', 'color', 'linea')
     fieldsets = (
         ('Información Básica', {
             'fields': ('sku', 'category', 'is_service', 'is_active')
         }),
         ('Especificaciones', {
-            'fields': ('medida', 'color', 'linea', 'material', 'opening_type', 'glass_type')
+            'fields': ('color', 'linea', 'material', 'opening_type', 'glass_type')
         }),
         ('Dimensiones y Peso', {
             'fields': ('width_mm', 'height_mm', 'weight_kg')

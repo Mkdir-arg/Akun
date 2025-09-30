@@ -186,7 +186,7 @@ class Producto(models.Model):
     material = models.CharField(max_length=20, choices=MATERIAL_CHOICES)
     opening_type = models.CharField(max_length=20, choices=OPENING_TYPE_CHOICES)
     glass_type = models.CharField(max_length=20, choices=GLASS_TYPE_CHOICES, blank=True)
-    medida = models.ForeignKey(MedidaProducto, on_delete=models.PROTECT, default=1)
+
     color = models.ForeignKey(ColorProducto, on_delete=models.PROTECT, default=1)
     linea = models.ForeignKey(LineaProducto, on_delete=models.PROTECT, default=1)
     width_mm = models.PositiveIntegerField(null=True, blank=True)
@@ -207,7 +207,7 @@ class Producto(models.Model):
         indexes = [
             models.Index(fields=['sku']),
             models.Index(fields=['category', 'material', 'opening_type']),
-            models.Index(fields=['medida', 'color', 'linea']),
+            models.Index(fields=['color', 'linea']),
         ]
         
     def clean(self):
@@ -225,7 +225,7 @@ class Producto(models.Model):
         super().save(*args, **kwargs)
         
     def __str__(self):
-        return f"{self.sku} - {self.medida.name} {self.color.name} {self.linea.name}"
+        return f"{self.sku} - {self.color.name} {self.linea.name}"
 
 
 class ListaPrecios(models.Model):

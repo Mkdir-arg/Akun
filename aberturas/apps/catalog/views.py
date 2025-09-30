@@ -4,12 +4,14 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 from .models import (
     CategoriaProducto, SubcategoriaProducto, Producto,
-    MedidaProducto, ColorProducto, LineaProducto
+    MedidaProducto, ColorProducto, LineaProducto, TasaImpuesto
 )
+from apps.core.models import Moneda
 from .serializers import (
     CategoriaProductoSerializer, SubcategoriaProductoSerializer, ProductoSerializer,
     MedidaProductoSerializer, ColorProductoSerializer, LineaProductoSerializer
 )
+from apps.core.serializers import MonedaSerializer
 
 class CategoriaProductoViewSet(viewsets.ModelViewSet):
     queryset = CategoriaProducto.objects.prefetch_related('subcategories')
@@ -84,9 +86,24 @@ class LineaProductoViewSet(viewsets.ModelViewSet):
     ordering = ['name']
 
 class ProductoViewSet(viewsets.ModelViewSet):
-    queryset = Producto.objects.select_related('category', 'medida', 'color', 'linea')
+    queryset = Producto.objects.select_related('category', 'color', 'linea')
     serializer_class = ProductoSerializer
     permission_classes = []
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['sku', 'medida__name', 'color__name', 'linea__name']
+    search_fields = ['sku', 'color__name', 'linea__name']
     ordering = ['sku']
+
+class TasaImpuestoViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = TasaImpuesto.objects.all()
+    serializer_class = None
+    permission_classes = []
+    
+    def list(self, request):
+        queryset = self.get_queryset()
+        data = [{'id': t.id, 'name': t.name, 'rate': str(t.rate)} for t in queryset]
+        return Response(data)
+
+class MonedaViewSet(viewsets.ReadOnlyModelViewSet):
+    queryset = Moneda.objects.all()
+    serializer_class = MonedaSerializer
+    permission_classes = []

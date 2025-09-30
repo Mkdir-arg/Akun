@@ -37,7 +37,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
     name: '',
     category: '',
     subcategory: '',
-    uom: '2', // M2 por defecto (ID 2)
+
     material: 'ALUMINIO',
     opening_type: 'CORREDIZA',
     glass_type: 'DVH',
@@ -73,9 +73,9 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
 
   const fetchFormData = async () => {
     try {
-      const [categoriesRes, uomsRes, taxRatesRes, currenciesRes] = await Promise.all([
+      const [categoriesRes, taxRatesRes, currenciesRes] = await Promise.all([
         fetch(`${process.env.REACT_APP_API_URL}/api/categories/`, { credentials: 'include' }),
-        fetch(`${process.env.REACT_APP_API_URL}/api/uoms/`, { credentials: 'include' }),
+
         fetch(`${process.env.REACT_APP_API_URL}/api/tax-rates/`, { credentials: 'include' }),
         fetch(`${process.env.REACT_APP_API_URL}/api/currencies/`, { credentials: 'include' })
       ]);
@@ -85,10 +85,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
         setCategories(categoriesData.results || categoriesData);
       }
 
-      if (uomsRes.ok) {
-        const uomsData = await uomsRes.json();
-        setUoms(uomsData.results || uomsData);
-      }
+
 
       if (taxRatesRes.ok) {
         const taxRatesData = await taxRatesRes.json();
@@ -117,7 +114,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
           name: product.name,
           category: categoryId,
           subcategory: product.subcategory || '',
-          uom: product.uom.toString(),
+
           material: product.material,
           opening_type: product.opening_type,
           glass_type: product.glass_type || '',
@@ -154,7 +151,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
       const submitData = {
         ...formData,
         category: parseInt(formData.category),
-        uom: parseInt(formData.uom),
+
         tax: parseInt(formData.tax),
         currency: parseInt(formData.currency),
         width_mm: formData.width_mm ? parseInt(formData.width_mm) : null,
@@ -357,25 +354,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ productId, onBack, onSave }) 
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Unidad de Medida *
-                </label>
-                <select
-                  name="uom"
-                  value={formData.uom}
-                  onChange={handleChange}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  required
-                >
-                  <option value="">Seleccionar UoM</option>
-                  {uoms.map((uom) => (
-                    <option key={uom.id} value={uom.id}>
-                      {uom.name} ({uom.code})
-                    </option>
-                  ))}
-                </select>
-              </div>
+
 
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">

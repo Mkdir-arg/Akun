@@ -11,6 +11,8 @@ router.register(r'products', views.ProductoViewSet)
 router.register(r'medidas', views.MedidaProductoViewSet)
 router.register(r'colores', views.ColorProductoViewSet)
 router.register(r'lineas', views.LineaProductoViewSet)
+router.register(r'tax-rates', views.TasaImpuestoViewSet)
+router.register(r'currencies', views.MonedaViewSet)
 
 urlpatterns = [
     path('api/', include(router.urls)),
