@@ -1,0 +1,3 @@
+@echo off
+echo Iniciando proyecto Akun...
+docker-compose up --build

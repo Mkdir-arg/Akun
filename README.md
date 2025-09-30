@@ -5,7 +5,21 @@ Proyecto Django minimalista con solo las funcionalidades esenciales:
 - Gestión de clientes (CRM)
 - Plantillas de productos (Catalog)
 
-## Instalación
+## Inicio Rápido con Docker
+
+**Un solo comando:**
+```bash
+start.bat
+```
+
+O manualmente:
+```bash
+docker-compose up --build
+```
+
+Luego ve a: http://localhost:8000
+
+## Instalación Manual
 
 1. Crear entorno virtual:
 ```bash
@@ -36,7 +50,7 @@ python manage.py runserver
 
 ## APIs Disponibles
 
-- `/api/auth/login/` - Login
+- `/api/auth/api/login/` - Login
 - `/api/auth/logout/` - Logout
 - `/api/crm/clientes/` - CRUD de clientes
 - `/api/catalog/templates/` - CRUD de plantillas
