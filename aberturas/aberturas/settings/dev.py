@@ -13,6 +13,9 @@ EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 # Development logging
 LOGGING['root']['level'] = 'DEBUG'
 
+# Allowed hosts for development
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', 'backend']
+
 # CSRF settings for development
 CSRF_TRUSTED_ORIGINS = [
     'http://localhost:3001',

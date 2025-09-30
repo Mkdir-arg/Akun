@@ -5,15 +5,12 @@ from . import views
 # app_name = 'catalog'  # Removido para evitar conflicto
 
 router = DefaultRouter()
-router.register(r'categories', views.CategoriaProductoViewSet)
-router.register(r'subcategories', views.SubcategoriaProductoViewSet)
-router.register(r'products', views.ProductoViewSet)
-router.register(r'medidas', views.MedidaProductoViewSet)
-router.register(r'colores', views.ColorProductoViewSet)
-router.register(r'lineas', views.LineaProductoViewSet)
-router.register(r'tax-rates', views.TasaImpuestoViewSet)
-router.register(r'currencies', views.MonedaViewSet)
+# Nuevas rutas para plantillas
+router.register(r'templates', views.ProductTemplateViewSet)
+router.register(r'attributes', views.TemplateAttributeViewSet, basename='attributes')
+router.register(r'options', views.AttributeOptionViewSet, basename='options')
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    path('api/v2/', include(router.urls)),
+    path('api/', include(router.urls)),  # Alias para compatibilidad
 ]

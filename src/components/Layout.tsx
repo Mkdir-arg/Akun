@@ -35,6 +35,7 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }
     { icon: Users, label: 'Clientes', path: '/clientes' },
     { icon: Package, label: 'Productos', path: '/productos' },
     { icon: Package, label: 'Categorías', path: '/categorias' },
+    { icon: FileText, label: 'Plantillas', path: '/plantillas' },
     { icon: ShoppingCart, label: 'Pedidos', path: '/pedidos' },
     { icon: FileText, label: 'Presupuestos', path: '/presupuestos' },
     { icon: BarChart3, label: 'Reportes', path: '/reportes' },

@@ -2,6 +2,7 @@ from django.db import models
 from django.core.exceptions import ValidationError
 from django.db.models import Q
 from decimal import Decimal
+import json
 
 
 class MedidaProducto(models.Model):
@@ -297,3 +298,147 @@ class ReglaListaPrecios(models.Model):
         
     def __str__(self):
         return f"{self.price_list.name} - {self.product.sku}"
+
+
+# ============ NUEVOS MODELOS PARA PLANTILLAS ============
+
+class ProductClass(models.TextChoices):
+    VENTANA = "VENTANA", "Ventana"
+    PUERTA = "PUERTA", "Puerta"
+    ACCESORIO = "ACCESORIO", "Accesorio"
+
+
+class ProductTemplate(models.Model):
+    product_class = models.CharField(max_length=20, choices=ProductClass.choices)
+    line_name = models.CharField(max_length=50)  # p.ej. "Módena"
+    code = models.SlugField(max_length=60, unique=True)  # p.ej. ventana-modena
+    base_price_net = models.DecimalField(max_digits=12, decimal_places=2, default=0)  # opcional
+    currency = models.CharField(max_length=3, default="ARS")
+    requires_dimensions = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+    valid_from = models.DateField(null=True, blank=True)
+    valid_to = models.DateField(null=True, blank=True)
+    version = models.PositiveIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+    modified_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = [("line_name", "version")]
+        verbose_name = "Plantilla de Producto"
+        verbose_name_plural = "Plantillas de Producto"
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.product_class} - {self.line_name} v{self.version}"
+
+
+class AttributeType(models.TextChoices):
+    SELECT = "SELECT", "Select"
+    BOOLEAN = "BOOLEAN", "Boolean"
+    NUMBER = "NUMBER", "Number"
+    DIMENSIONS_MM = "DIMENSIONS_MM", "Dimensions (mm)"
+    QUANTITY = "QUANTITY", "Quantity"
+
+
+class RenderVariant(models.TextChoices):
+    SELECT = "select", "Select"
+    SWATCHES = "swatches", "Swatches"
+    RADIO = "radio", "Radio"
+    BUTTONS = "buttons", "Buttons"
+
+
+class TemplateAttribute(models.Model):
+    template = models.ForeignKey(ProductTemplate, related_name="attributes", on_delete=models.CASCADE)
+    name = models.CharField(max_length=60)
+    code = models.SlugField(max_length=60)
+    type = models.CharField(max_length=15, choices=AttributeType.choices)
+    is_required = models.BooleanField(default=True)
+    order = models.PositiveSmallIntegerField(default=1)
+    render_variant = models.CharField(max_length=10, choices=RenderVariant.choices, default=RenderVariant.SELECT)
+    rules_json = models.JSONField(default=dict, blank=True)
+    
+    # Campos para NUMBER/QUANTITY
+    min_value = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    max_value = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    step_value = models.DecimalField(max_digits=12, decimal_places=4, null=True, blank=True)
+    unit_label = models.CharField(max_length=20, blank=True)
+    
+    # Campos para DIMENSIONS_MM
+    min_width = models.PositiveIntegerField(null=True, blank=True)
+    max_width = models.PositiveIntegerField(null=True, blank=True)
+    min_height = models.PositiveIntegerField(null=True, blank=True)
+    max_height = models.PositiveIntegerField(null=True, blank=True)
+    step_mm = models.PositiveIntegerField(default=10, null=True, blank=True)
+    rebaje_vidrio_mm = models.PositiveIntegerField(default=0, null=True, blank=True)
+
+    class Meta:
+        unique_together = [("template", "code")]
+        ordering = ["order", "id"]
+        verbose_name = "Atributo de Plantilla"
+        verbose_name_plural = "Atributos de Plantilla"
+
+    def __str__(self):
+        return f"{self.template.code} - {self.name}"
+
+
+class PricingMode(models.TextChoices):
+    ABS = "ABS", "Suma absoluta por ítem"
+    PER_M2 = "PER_M2", "Precio por m²"
+    PERIMETER = "PERIMETER", "Precio por perímetro (m)"
+    FACTOR = "FACTOR", "Factor multiplicativo (x)"
+    PER_UNIT = "PER_UNIT", "Precio por unidad"
+
+
+class AttributeOption(models.Model):
+    attribute = models.ForeignKey(TemplateAttribute, related_name="options", on_delete=models.CASCADE)
+    label = models.CharField(max_length=80)
+    code = models.SlugField(max_length=80)
+    pricing_mode = models.CharField(max_length=10, choices=PricingMode.choices, default=PricingMode.ABS)
+    price_value = models.DecimalField(max_digits=12, decimal_places=4, default=0)
+    currency = models.CharField(max_length=3, default="ARS")
+    order = models.PositiveSmallIntegerField(default=1)
+    is_default = models.BooleanField(default=False)
+    
+    # Visual
+    swatch_hex = models.CharField(max_length=7, blank=True)
+    icon = models.CharField(max_length=50, blank=True)
+    
+    # Para PER_UNIT
+    qty_attr_code = models.CharField(max_length=60, blank=True)
+
+    class Meta:
+        unique_together = [("attribute", "code")]
+        ordering = ["order", "id"]
+        verbose_name = "Opción de Atributo"
+        verbose_name_plural = "Opciones de Atributo"
+
+    def clean(self):
+        # Validar que solo haya una opción por defecto por atributo
+        if self.is_default:
+            existing_default = AttributeOption.objects.filter(
+                attribute=self.attribute, is_default=True
+            ).exclude(pk=self.pk)
+            if existing_default.exists():
+                raise ValidationError("Solo puede haber una opción por defecto por atributo.")
+        
+        # Validar PER_UNIT requiere qty_attr_code
+        if self.pricing_mode == PricingMode.PER_UNIT and not self.qty_attr_code:
+            raise ValidationError("PER_UNIT requiere especificar qty_attr_code.")
+        
+        # Validar que qty_attr_code existe y es QUANTITY
+        if self.qty_attr_code:
+            try:
+                qty_attr = TemplateAttribute.objects.get(
+                    template=self.attribute.template,
+                    code=self.qty_attr_code,
+                    type=AttributeType.QUANTITY
+                )
+            except TemplateAttribute.DoesNotExist:
+                raise ValidationError(f"No existe atributo QUANTITY con code '{self.qty_attr_code}' en esta plantilla.")
+
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.attribute.name} - {self.label}"

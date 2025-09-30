@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, Plus, Trash2 } from 'lucide-react';
 import PDFGenerator from './PDFGenerator';
+import TemplateSelector from './TemplateSelector';
 
 interface QuoteDetailProps {
   quoteId: string;
@@ -182,6 +183,42 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
         description: product.name,
         currency: product.currency.toString()
       });
+    }
+  };
+
+  const handleAddTemplateItem = async (templateData: any) => {
+    const itemData = {
+      quote: parseInt(quoteId),
+      template_id: templateData.template_id,
+      template_selections: templateData.selections,
+      template_dimensions: templateData.dimensions,
+      quantity: templateData.quantity,
+      unit_price: templateData.unit_price,
+      tax_rate: templateData.tax_rate,
+      description: templateData.description,
+      line_number: items.length + 1
+    };
+
+    try {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/api/quote-items/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify(itemData)
+      });
+
+      if (response.ok) {
+        setShowAddProduct(false);
+        fetchItems();
+        fetchQuote();
+      } else {
+        alert('Error al agregar el ítem');
+      }
+    } catch (error) {
+      console.error('Error adding template item:', error);
+      alert('Error al agregar el ítem');
     }
   };
 
@@ -400,7 +437,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                 className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 <Plus className="w-4 h-4 mr-2" />
-                Agregar Producto
+                Agregar Ítem
               </button>
             )}
           </div>
@@ -511,7 +548,7 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                   className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
                 >
                   <Plus className="w-4 h-4 mr-2" />
-                  Agregar Primer Producto
+                  Agregar Primer Ítem
                 </button>
               </div>
             )}
@@ -542,9 +579,11 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
 
       {showAddProduct && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg p-6 w-full max-w-lg max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-semibold mb-4">Agregar Producto</h3>
-            <form onSubmit={handleAddItem} className="space-y-4">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <TemplateSelector
+              onAddItem={handleAddTemplateItem}
+              onCancel={() => setShowAddProduct(false)}
+            />
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Tipo</label>
                 <select
@@ -775,7 +814,6 @@ const QuoteDetail: React.FC<QuoteDetailProps> = ({ quoteId, onBack }) => {
                   Agregar
                 </button>
               </div>
-            </form>
           </div>
         </div>
       )}

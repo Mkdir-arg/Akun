@@ -1,109 +1,192 @@
-from rest_framework import viewsets, filters
+from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .models import (
-    CategoriaProducto, SubcategoriaProducto, Producto,
-    MedidaProducto, ColorProducto, LineaProducto, TasaImpuesto
-)
-from apps.core.models import Moneda
+from django.shortcuts import get_object_or_404
+from django.db import transaction
+from decimal import Decimal
+
+from .models import ProductTemplate, TemplateAttribute, AttributeOption
 from .serializers import (
-    CategoriaProductoSerializer, SubcategoriaProductoSerializer, ProductoSerializer,
-    MedidaProductoSerializer, ColorProductoSerializer, LineaProductoSerializer
+    ProductTemplateSerializer, ProductTemplateListSerializer,
+    TemplateAttributeSerializer, AttributeOptionSerializer,
+    PreviewPricingRequestSerializer, ReorderSerializer
 )
-from apps.core.serializers import MonedaSerializer
+from .services import PricingCalculatorService
 
-class CategoriaProductoViewSet(viewsets.ModelViewSet):
-    queryset = CategoriaProducto.objects.prefetch_related('subcategories')
-    serializer_class = CategoriaProductoSerializer
-    permission_classes = []
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'code']
-    ordering = ['name']
+
+class ProductTemplateViewSet(viewsets.ModelViewSet):
+    queryset = ProductTemplate.objects.all()
+    permission_classes = []  # Temporalmente sin permisos
     
-    @action(detail=False, methods=['post'], url_path='generate-sku')
-    def generate_sku(self, request):
-        category_id = request.data.get('category_id')
-        if not category_id:
-            return Response({'error': 'category_id required'}, status=400)
+    def get_serializer_class(self):
+        if self.action == 'list':
+            return ProductTemplateListSerializer
+        return ProductTemplateSerializer
         
-        try:
-            category = CategoriaProducto.objects.get(id=category_id)
-            # Generar SKU basado en categoría
-            prefix = category.code.upper()[:3]
-            last_product = Producto.objects.filter(category=category).order_by('-id').first()
-            if last_product and last_product.sku:
-                try:
-                    last_number = int(last_product.sku.split('-')[-1])
-                    new_number = last_number + 1
-                except (ValueError, IndexError):
-                    new_number = 1
-            else:
-                new_number = 1
+    def get_queryset(self):
+        queryset = ProductTemplate.objects.all()
+        
+        # Filtros
+        product_class = self.request.query_params.get('class')
+        line_name = self.request.query_params.get('line_name')
+        is_active = self.request.query_params.get('active')
+        
+        if product_class:
+            queryset = queryset.filter(product_class=product_class)
+        if line_name:
+            queryset = queryset.filter(line_name__icontains=line_name)
+        if is_active is not None:
+            queryset = queryset.filter(is_active=is_active.lower() == 'true')
             
-            sku = f"{prefix}-{new_number:03d}"
-            return Response({'sku': sku})
-        except CategoriaProducto.DoesNotExist:
-            return Response({'error': 'Category not found'}, status=404)
+        return queryset.order_by('-created_at')
+        
+    @action(detail=True, methods=['post'])
+    def clone(self, request, pk=None):
+        """Clona una plantilla creando una nueva versión"""
+        template = self.get_object()
+        
+        with transaction.atomic():
+            # Crear nueva versión
+            new_version = ProductTemplate.objects.filter(line_name=template.line_name).count() + 1
+            new_template = ProductTemplate.objects.create(
+                product_class=template.product_class,
+                line_name=template.line_name,
+                code=f"{template.code}-v{new_version}",
+                base_price_net=template.base_price_net,
+                currency=template.currency,
+                requires_dimensions=template.requires_dimensions,
+                version=new_version
+            )
+            
+            # Clonar atributos y opciones
+            for attr in template.attributes.all():
+                new_attr = TemplateAttribute.objects.create(
+                    template=new_template,
+                    name=attr.name,
+                    code=attr.code,
+                    type=attr.type,
+                    is_required=attr.is_required,
+                    order=attr.order,
+                    rules_json=attr.rules_json
+                )
+                
+                for option in attr.options.all():
+                    AttributeOption.objects.create(
+                        attribute=new_attr,
+                        label=option.label,
+                        code=option.code,
+                        pricing_mode=option.pricing_mode,
+                        price_value=option.price_value,
+                        currency=option.currency,
+                        order=option.order,
+                        is_default=option.is_default
+                    )
+                    
+        serializer = ProductTemplateSerializer(new_template)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        
+    @action(detail=True, methods=['post'])
+    def preview_pricing(self, request, pk=None):
+        """Calcula preview de precio basado en selecciones"""
+        template = self.get_object()
+        
+        serializer = PreviewPricingRequestSerializer(data=request.data)
+        if not serializer.is_valid():
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+            
+        data = serializer.validated_data
+        
+        # Validar selecciones
+        calculator = PricingCalculatorService(template)
+        validation_errors = calculator.validate_selections(data['selections'])
+        
+        if validation_errors:
+            return Response({'errors': validation_errors}, status=status.HTTP_400_BAD_REQUEST)
+            
+        try:
+            result = calculator.calculate_preview_pricing(
+                selections=data['selections'],
+                width_mm=data.get('width_mm'),
+                height_mm=data.get('height_mm'),
+                currency=data.get('currency', 'ARS'),
+                iva_pct=Decimal(str(data.get('iva_pct', 21.0)))
+            )
+            return Response(result)
+            
+        except ValueError as e:
+            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
-class SubcategoriaProductoViewSet(viewsets.ModelViewSet):
-    queryset = SubcategoriaProducto.objects.select_related('category')
-    serializer_class = SubcategoriaProductoSerializer
-    permission_classes = []
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'code', 'category__name']
-    ordering = ['category__name', 'name']
+
+class TemplateAttributeViewSet(viewsets.ModelViewSet):
+    serializer_class = TemplateAttributeSerializer
+    permission_classes = []  # Temporalmente sin permisos
     
     def get_queryset(self):
-        queryset = super().get_queryset()
-        category_id = self.request.query_params.get('category', None)
-        if category_id:
-            queryset = queryset.filter(category_id=category_id)
-        return queryset
+        template_id = self.request.query_params.get('template_id')
+        if template_id:
+            return TemplateAttribute.objects.filter(template_id=template_id)
+        return TemplateAttribute.objects.all()
+        
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        template_id = self.request.query_params.get('template_id') or self.request.data.get('template_id')
+        if template_id:
+            context['template'] = get_object_or_404(ProductTemplate, pk=template_id)
+        return context
+        
+    def perform_create(self, serializer):
+        template_id = self.request.data.get('template_id')
+        template = get_object_or_404(ProductTemplate, pk=template_id)
+        serializer.save(template=template)
+        
+    @action(detail=True, methods=['post'])
+    def reorder(self, request, pk=None):
+        """Reordena un atributo"""
+        attribute = self.get_object()
+        serializer = ReorderSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            new_order = serializer.validated_data['new_order']
+            attribute.order = new_order
+            attribute.save()
+            return Response({'status': 'reordered'})
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-class MedidaProductoViewSet(viewsets.ModelViewSet):
-    queryset = MedidaProducto.objects.all()
-    serializer_class = MedidaProductoSerializer
-    permission_classes = []
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'code']
-    ordering = ['name']
 
-class ColorProductoViewSet(viewsets.ModelViewSet):
-    queryset = ColorProducto.objects.all()
-    serializer_class = ColorProductoSerializer
-    permission_classes = []
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'code']
-    ordering = ['name']
-
-class LineaProductoViewSet(viewsets.ModelViewSet):
-    queryset = LineaProducto.objects.all()
-    serializer_class = LineaProductoSerializer
-    permission_classes = []
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'code']
-    ordering = ['name']
-
-class ProductoViewSet(viewsets.ModelViewSet):
-    queryset = Producto.objects.select_related('category', 'color', 'linea')
-    serializer_class = ProductoSerializer
-    permission_classes = []
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['sku', 'color__name', 'linea__name']
-    ordering = ['sku']
-
-class TasaImpuestoViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = TasaImpuesto.objects.all()
-    serializer_class = None
-    permission_classes = []
+class AttributeOptionViewSet(viewsets.ModelViewSet):
+    serializer_class = AttributeOptionSerializer
+    permission_classes = []  # Temporalmente sin permisos
     
-    def list(self, request):
-        queryset = self.get_queryset()
-        data = [{'id': t.id, 'name': t.name, 'rate': str(t.rate)} for t in queryset]
-        return Response(data)
-
-class MonedaViewSet(viewsets.ReadOnlyModelViewSet):
-    queryset = Moneda.objects.all()
-    serializer_class = MonedaSerializer
-    permission_classes = []
+    def get_queryset(self):
+        attribute_id = self.request.query_params.get('attribute_id')
+        if attribute_id:
+            return AttributeOption.objects.filter(attribute_id=attribute_id)
+        return AttributeOption.objects.all()
+        
+    def get_serializer_context(self):
+        context = super().get_serializer_context()
+        attribute_id = self.request.query_params.get('attribute_id') or self.request.data.get('attribute_id')
+        if attribute_id:
+            context['attribute'] = get_object_or_404(TemplateAttribute, pk=attribute_id)
+        return context
+        
+    def perform_create(self, serializer):
+        attribute_id = self.request.data.get('attribute_id')
+        attribute = get_object_or_404(TemplateAttribute, pk=attribute_id)
+        serializer.save(attribute=attribute)
+        
+    @action(detail=True, methods=['post'])
+    def reorder(self, request, pk=None):
+        """Reordena una opción"""
+        option = self.get_object()
+        serializer = ReorderSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            new_order = serializer.validated_data['new_order']
+            option.order = new_order
+            option.save()
+            return Response({'status': 'reordered'})
+            
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)

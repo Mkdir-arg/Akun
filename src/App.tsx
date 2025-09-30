@@ -8,6 +8,12 @@ import CustomerEdit from './components/customers/CustomerEdit';
 import ProductList from './components/products/ProductList';
 import ProductForm from './components/products/ProductForm';
 import CategoryList from './components/categories/CategoryList';
+import SimpleTemplateList from './components/templates/SimpleTemplateList';
+import SimpleTemplateEditor from './components/templates/SimpleTemplateEditor';
+import TemplateList from './components/templates/TemplateList';
+import TemplateEditor from './components/templates/TemplateEditor';
+import TemplatePreview from './components/templates/TemplatePreview';
+
 import QuoteList from './components/quotes/QuoteList';
 import QuoteForm from './components/quotes/QuoteForm';
 import QuoteDetail from './components/quotes/QuoteDetail';
@@ -83,6 +89,7 @@ function App() {
   }
 
   const renderCurrentPage = () => {
+
     if (currentPath === '/clientes') {
       return <CustomerList />;
     }
@@ -91,6 +98,28 @@ function App() {
     }
     if (currentPath === '/categorias') {
       return <CategoryList />;
+    }
+    if (currentPath === '/plantillas') {
+      return <TemplateList 
+        onEdit={(id) => window.location.hash = `/plantillas/${id || 'nuevo'}/editar`}
+        onPreview={(id) => window.location.hash = `/plantillas/${id}/preview`}
+      />;
+    }
+    if (currentPath === '/plantillas/nuevo/editar') {
+      return <TemplateEditor 
+        onSave={() => window.location.hash = '/plantillas'}
+      />;
+    }
+    if (currentPath.startsWith('/plantillas/') && currentPath.endsWith('/editar')) {
+      const templateId = parseInt(currentPath.split('/')[2]);
+      return <TemplateEditor 
+        templateId={templateId}
+        onSave={() => window.location.hash = '/plantillas'}
+      />;
+    }
+    if (currentPath.startsWith('/plantillas/') && currentPath.endsWith('/preview')) {
+      const templateId = parseInt(currentPath.split('/')[2]);
+      return <TemplatePreview templateId={templateId} />;
     }
     if (currentPath === '/presupuestos') {
       return <QuoteList />;
@@ -164,6 +193,12 @@ function App() {
     if (currentPath === '/configuracion') {
       return <SettingsLayout />;
     }
+    
+    // Fallback para rutas no encontradas
+    if (currentPath.startsWith('/plantillas/')) {
+      return <div className="p-6 text-center text-red-600">Plantilla no encontrada</div>;
+    }
+    
     return <Home />;
   };
 
