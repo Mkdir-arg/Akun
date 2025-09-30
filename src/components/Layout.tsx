@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Users, ShoppingCart, Package, Home as HomeIcon, FileText, Settings, BarChart3, Menu, X } from 'lucide-react';
+import { LogOut, Users, ShoppingCart, Home as HomeIcon, FileText, Settings, BarChart3, Menu, X } from 'lucide-react';
 
 interface User {
   id: number;
@@ -33,8 +33,6 @@ const Layout: React.FC<LayoutProps> = ({ user, onLogout, children, currentPath }
   const menuItems = [
     { icon: HomeIcon, label: 'Dashboard', path: '/' },
     { icon: Users, label: 'Clientes', path: '/clientes' },
-    { icon: Package, label: 'Productos', path: '/productos' },
-    { icon: Package, label: 'Categorías', path: '/categorias' },
     { icon: FileText, label: 'Plantillas', path: '/plantillas' },
     { icon: ShoppingCart, label: 'Pedidos', path: '/pedidos' },
     { icon: FileText, label: 'Presupuestos', path: '/presupuestos' },

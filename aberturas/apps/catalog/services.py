@@ -1,6 +1,11 @@
 from decimal import Decimal
-from typing import Dict, List, Any, Optional
-from .models import ProductTemplate, TemplateAttribute, AttributeOption, AttributeType, PricingMode
+from typing import Dict, Any, List
+from django.core.exceptions import ValidationError
+
+from .models import (
+    ProductTemplate, TemplateAttribute, AttributeOption,
+    AttributeType, PricingMode
+)
 
 
 class PricingCalculatorService:
@@ -8,223 +13,230 @@ class PricingCalculatorService:
         self.template = template
         
     def validate_selections(self, selections: Dict[str, Any]) -> List[str]:
-        """Valida las selecciones contra la plantilla"""
+        """Valida las selecciones del usuario"""
         errors = []
         
         # Verificar atributos requeridos
         for attr in self.template.attributes.filter(is_required=True):
-            if attr.code not in selections:
-                errors.append(f"Atributo requerido '{attr.name}' no está presente")
+            if attr.code not in selections or selections[attr.code] is None:
+                errors.append(f"El atributo '{attr.name}' es requerido")
                 continue
                 
-            selection = selections[attr.code]
-            
-            # Validar según tipo
+            # Validaciones específicas por tipo
             if attr.type == AttributeType.SELECT:
-                if not attr.options.filter(code=selection).exists():
-                    errors.append(f"Opción '{selection}' no válida para '{attr.name}'")
-                    
-            elif attr.type == AttributeType.BOOLEAN:
-                if not isinstance(selection, bool):
-                    errors.append(f"Valor booleano esperado para '{attr.name}'")
+                if not attr.options.filter(code=selections[attr.code]).exists():
+                    errors.append(f"Opción inválida para '{attr.name}'")
                     
             elif attr.type == AttributeType.DIMENSIONS_MM:
-                if not isinstance(selection, dict) or 'width_mm' not in selection or 'height_mm' not in selection:
-                    errors.append(f"Dimensiones (width_mm, height_mm) requeridas para '{attr.name}'")
+                dim = selections[attr.code]
+                if not isinstance(dim, dict) or 'width_mm' not in dim or 'height_mm' not in dim:
+                    errors.append(f"Dimensiones inválidas para '{attr.name}'")
                 else:
-                    width = selection.get('width_mm', 0)
-                    height = selection.get('height_mm', 0)
+                    width = dim.get('width_mm', 0)
+                    height = dim.get('height_mm', 0)
                     
                     if attr.min_width and width < attr.min_width:
-                        errors.append(f"Ancho mínimo {attr.min_width}mm para '{attr.name}'")
+                        errors.append(f"Ancho mínimo para '{attr.name}': {attr.min_width}mm")
                     if attr.max_width and width > attr.max_width:
-                        errors.append(f"Ancho máximo {attr.max_width}mm para '{attr.name}'")
+                        errors.append(f"Ancho máximo para '{attr.name}': {attr.max_width}mm")
                     if attr.min_height and height < attr.min_height:
-                        errors.append(f"Alto mínimo {attr.min_height}mm para '{attr.name}'")
+                        errors.append(f"Alto mínimo para '{attr.name}': {attr.min_height}mm")
                     if attr.max_height and height > attr.max_height:
-                        errors.append(f"Alto máximo {attr.max_height}mm para '{attr.name}'")
+                        errors.append(f"Alto máximo para '{attr.name}': {attr.max_height}mm")
                         
             elif attr.type in [AttributeType.NUMBER, AttributeType.QUANTITY]:
-                try:
-                    value = Decimal(str(selection))
+                value = selections[attr.code]
+                if not isinstance(value, (int, float)):
+                    errors.append(f"Valor numérico inválido para '{attr.name}'")
+                else:
                     if attr.min_value and value < attr.min_value:
-                        errors.append(f"Valor mínimo {attr.min_value} para '{attr.name}'")
+                        errors.append(f"Valor mínimo para '{attr.name}': {attr.min_value}")
                     if attr.max_value and value > attr.max_value:
-                        errors.append(f"Valor máximo {attr.max_value} para '{attr.name}'")
-                except (ValueError, TypeError):
-                    errors.append(f"Valor numérico esperado para '{attr.name}'")
+                        errors.append(f"Valor máximo para '{attr.name}': {attr.max_value}")
         
+        # Validar que existan dimensiones si hay precios PER_M2 o PERIMETER
+        has_area_pricing = False
+        has_perimeter_pricing = False
+        
+        for attr in self.template.attributes.all():
+            if attr.type == AttributeType.SELECT:
+                for option in attr.options.all():
+                    if option.pricing_mode == PricingMode.PER_M2:
+                        has_area_pricing = True
+                    elif option.pricing_mode == PricingMode.PERIMETER:
+                        has_perimeter_pricing = True
+            elif attr.type == AttributeType.BOOLEAN:
+                pricing_info = attr.rules_json.get('pricing', {})
+                mode = pricing_info.get('pricing_mode')
+                if mode == 'PER_M2':
+                    has_area_pricing = True
+                elif mode == 'PERIMETER':
+                    has_perimeter_pricing = True
+        
+        if (has_area_pricing or has_perimeter_pricing):
+            dim_attr = self.template.attributes.filter(type=AttributeType.DIMENSIONS_MM).first()
+            if not dim_attr:
+                errors.append("Se requiere un atributo DIMENSIONS_MM para precios por área/perímetro")
+            elif dim_attr.code not in selections:
+                errors.append("Se requieren dimensiones para calcular el precio")
+                
         return errors
     
-    def calculate_preview_pricing(self, selections: Dict[str, Any], width_mm: Optional[int] = None, 
-                                height_mm: Optional[int] = None, currency: str = 'ARS', 
+    def calculate_preview_pricing(self, selections: Dict[str, Any], width_mm: int = None, 
+                                height_mm: int = None, currency: str = "ARS", 
                                 iva_pct: Decimal = Decimal('21.0')) -> Dict[str, Any]:
-        """Calcula el preview de precios según las especificaciones"""
+        """Calcula el precio de preview"""
         
         # Inicializar cálculos
         calc = {}
+        price_net = Decimal(str(self.template.base_price_net))
         breakdown = []
         
-        # Precio base
-        net_price = self.template.base_price_net
-        if net_price > 0:
+        if self.template.base_price_net > 0:
             breakdown.append({
-                'source': 'template_base',
-                'mode': 'ABS',
-                'value': float(net_price)
+                "source": "template_base",
+                "mode": "ABS",
+                "value": float(self.template.base_price_net)
             })
         
-        # Calcular dimensiones
-        dimensions_attr = self.template.attributes.filter(type=AttributeType.DIMENSIONS_MM).first()
-        if dimensions_attr:
-            dim_data = selections.get(dimensions_attr.code, {})
-            if isinstance(dim_data, dict):
-                width = dim_data.get('width_mm', width_mm or 0)
-                height = dim_data.get('height_mm', height_mm or 0)
-            else:
-                width = width_mm or 0
-                height = height_mm or 0
-                
-            if width and height:
-                calc['area_m2'] = round((width * height) / 1_000_000, 4)
-                calc['perimeter_m'] = round(2 * (width + height) / 1000, 4)
+        # Obtener dimensiones
+        dimensions = selections.get('dim') or {}
+        if width_mm:
+            dimensions['width_mm'] = width_mm
+        if height_mm:
+            dimensions['height_mm'] = height_mm
+            
+        if dimensions.get('width_mm') and dimensions.get('height_mm'):
+            width = dimensions['width_mm']
+            height = dimensions['height_mm']
+            calc['area_m2'] = round((width * height) / 1_000_000, 4)
+            calc['perimeter_m'] = round(2 * (width + height) / 1000, 4)
         
-        # Acumuladores por tipo de precio
-        abs_total = net_price
-        per_unit_total = Decimal('0')
-        per_m2_total = Decimal('0')
-        perimeter_total = Decimal('0')
-        factors = []
+        # Procesar atributos en orden: ABS, PER_UNIT, PER_M2, PERIMETER, luego FACTOR
+        attributes = self.template.attributes.all().order_by('order')
+        factor_items = []
         
-        # Procesar selecciones
-        for attr in self.template.attributes.all():
-            if attr.code not in selections:
+        for attr in attributes:
+            attr_code = attr.code
+            selection = selections.get(attr_code)
+            
+            if selection is None:
                 continue
                 
-            selection = selections[attr.code]
-            
             if attr.type == AttributeType.SELECT:
-                option = attr.options.filter(code=selection).first()
-                if option:
-                    self._apply_option_pricing(option, calc, selections, breakdown,
-                                             abs_total, per_unit_total, per_m2_total,
-                                             perimeter_total, factors)
-            
+                try:
+                    option = attr.options.get(code=selection)
+                    
+                    if option.pricing_mode == PricingMode.FACTOR:
+                        factor_items.append(option)
+                    else:
+                        value = self._calculate_option_price(option, selections, calc)
+                        if value > 0:
+                            price_net += Decimal(str(value))
+                            breakdown.append({
+                                "source": f"{attr_code}/{option.code}",
+                                "mode": option.pricing_mode,
+                                "value": float(value),
+                                **self._get_breakdown_details(option, selections, calc)
+                            })
+                            
+                except AttributeOption.DoesNotExist:
+                    continue
+                    
             elif attr.type == AttributeType.BOOLEAN and selection:
                 # Precio a nivel atributo para BOOLEAN
-                pricing_mode = attr.rules_json.get('pricing_mode')
-                if pricing_mode:
-                    price_value = Decimal(str(attr.rules_json.get('price_value', 0)))
+                pricing_info = attr.rules_json.get('pricing', {})
+                if pricing_info:
+                    mode = pricing_info.get('pricing_mode')
+                    price_val = Decimal(str(pricing_info.get('price_value', 0)))
                     
-                    if pricing_mode == 'ABS':
-                        abs_total += price_value
+                    if mode == 'ABS':
+                        value = price_val
+                    elif mode == 'PER_M2' and calc.get('area_m2'):
+                        value = price_val * Decimal(str(calc['area_m2']))
+                    elif mode == 'PERIMETER' and calc.get('perimeter_m'):
+                        value = price_val * Decimal(str(calc['perimeter_m']))
+                    else:
+                        value = Decimal('0')
+                    
+                    if value > 0:
+                        price_net += value
                         breakdown.append({
-                            'source': f'{attr.code}/true',
-                            'mode': 'ABS',
-                            'value': float(price_value)
-                        })
-                    elif pricing_mode == 'PER_M2' and 'area_m2' in calc:
-                        total = price_value * Decimal(str(calc['area_m2']))
-                        per_m2_total += total
-                        breakdown.append({
-                            'source': f'{attr.code}/true',
-                            'mode': 'PER_M2',
-                            'm2': calc['area_m2'],
-                            'unit': float(price_value),
-                            'value': float(total)
-                        })
-                    elif pricing_mode == 'PERIMETER' and 'perimeter_m' in calc:
-                        total = price_value * Decimal(str(calc['perimeter_m']))
-                        perimeter_total += total
-                        breakdown.append({
-                            'source': f'{attr.code}/true',
-                            'mode': 'PERIMETER',
-                            'm': calc['perimeter_m'],
-                            'unit': float(price_value),
-                            'value': float(total)
+                            "source": f"{attr_code}/true",
+                            "mode": mode,
+                            "value": float(value),
+                            **({"m2": calc['area_m2'], "unit": float(price_val)} if mode == 'PER_M2' else {}),
+                            **({"m": calc['perimeter_m'], "unit": float(price_val)} if mode == 'PERIMETER' else {})
                         })
         
-        # Sumar componentes antes de factores
-        subtotal = abs_total + per_unit_total + per_m2_total + perimeter_total
-        
-        # Aplicar factores
-        for factor_info in factors:
-            delta = subtotal * (factor_info['factor'] - Decimal('1'))
-            subtotal += delta
+        # Aplicar factores al final
+        for option in factor_items:
+            factor = Decimal(str(option.price_value))
+            applied_on = price_net
+            delta = applied_on * (factor - Decimal('1'))
+            price_net += delta
+            
             breakdown.append({
-                'source': factor_info['source'],
-                'mode': 'FACTOR',
-                'factor': float(factor_info['factor']),
-                'applied_on': float(subtotal - delta),
-                'delta': float(delta)
+                "source": f"{option.attribute.code}/{option.code}",
+                "mode": "FACTOR",
+                "factor": float(factor),
+                "applied_on": float(applied_on),
+                "delta": float(delta)
             })
         
         # Calcular impuestos
-        tax = subtotal * (iva_pct / Decimal('100'))
-        gross = subtotal + tax
+        tax = price_net * (iva_pct / Decimal('100'))
+        price_gross = price_net + tax
         
         return {
-            'calc': calc,
-            'price': {
-                'net': float(subtotal),
-                'tax': float(tax),
-                'gross': float(gross)
+            "calc": calc,
+            "price": {
+                "net": float(price_net),
+                "tax": float(tax),
+                "gross": float(price_gross)
             },
-            'breakdown': breakdown,
-            'currency': currency
+            "breakdown": breakdown,
+            "currency": currency
         }
     
-    def _apply_option_pricing(self, option: AttributeOption, calc: Dict, selections: Dict,
-                            breakdown: List, abs_total: Decimal, per_unit_total: Decimal,
-                            per_m2_total: Decimal, perimeter_total: Decimal, factors: List):
-        """Aplica el pricing de una opción según su modo"""
-        price_value = option.price_value
+    def _calculate_option_price(self, option: AttributeOption, selections: Dict, calc: Dict) -> Decimal:
+        """Calcula el precio de una opción específica"""
+        price_val = Decimal(str(option.price_value))
         
         if option.pricing_mode == PricingMode.ABS:
-            abs_total += price_value
-            breakdown.append({
-                'source': f'{option.attribute.code}/{option.code}',
-                'mode': 'ABS',
-                'value': float(price_value)
-            })
-        
-        elif option.pricing_mode == PricingMode.PER_UNIT and option.qty_attr_code:
+            return price_val
+        elif option.pricing_mode == PricingMode.PER_M2:
+            area = calc.get('area_m2', 0)
+            return price_val * Decimal(str(area)) if area else Decimal('0')
+        elif option.pricing_mode == PricingMode.PERIMETER:
+            perimeter = calc.get('perimeter_m', 0)
+            return price_val * Decimal(str(perimeter)) if perimeter else Decimal('0')
+        elif option.pricing_mode == PricingMode.PER_UNIT:
             qty = selections.get(option.qty_attr_code, 0)
-            total = price_value * Decimal(str(qty))
-            per_unit_total += total
-            breakdown.append({
-                'source': f'{option.attribute.code}/{option.code}',
-                'mode': 'PER_UNIT',
-                'qty_attr': option.qty_attr_code,
-                'qty': qty,
-                'unit': float(price_value),
-                'value': float(total)
+            return price_val * Decimal(str(qty)) if qty else Decimal('0')
+        
+        return Decimal('0')
+    
+    def _get_breakdown_details(self, option: AttributeOption, selections: Dict, calc: Dict) -> Dict:
+        """Obtiene detalles adicionales para el breakdown"""
+        details = {}
+        
+        if option.pricing_mode == PricingMode.PER_M2:
+            details.update({
+                "m2": calc.get('area_m2', 0),
+                "unit": float(option.price_value)
+            })
+        elif option.pricing_mode == PricingMode.PERIMETER:
+            details.update({
+                "m": calc.get('perimeter_m', 0),
+                "unit": float(option.price_value)
+            })
+        elif option.pricing_mode == PricingMode.PER_UNIT:
+            qty = selections.get(option.qty_attr_code, 0)
+            details.update({
+                "qty_attr": option.qty_attr_code,
+                "qty": qty,
+                "unit": float(option.price_value)
             })
         
-        elif option.pricing_mode == PricingMode.PER_M2 and 'area_m2' in calc:
-            total = price_value * Decimal(str(calc['area_m2']))
-            per_m2_total += total
-            breakdown.append({
-                'source': f'{option.attribute.code}/{option.code}',
-                'mode': 'PER_M2',
-                'm2': calc['area_m2'],
-                'unit': float(price_value),
-                'value': float(total)
-            })
-        
-        elif option.pricing_mode == PricingMode.PERIMETER and 'perimeter_m' in calc:
-            total = price_value * Decimal(str(calc['perimeter_m']))
-            perimeter_total += total
-            breakdown.append({
-                'source': f'{option.attribute.code}/{option.code}',
-                'mode': 'PERIMETER',
-                'm': calc['perimeter_m'],
-                'unit': float(price_value),
-                'value': float(total)
-            })
-        
-        elif option.pricing_mode == PricingMode.FACTOR:
-            factors.append({
-                'source': f'{option.attribute.code}/{option.code}',
-                'factor': price_value
-            })
+        return details

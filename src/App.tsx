@@ -5,9 +5,6 @@ import CustomerList from './components/customers/CustomerList';
 import CustomerForm from './components/customers/CustomerForm';
 import CustomerDetail from './components/customers/CustomerDetail';
 import CustomerEdit from './components/customers/CustomerEdit';
-import ProductList from './components/products/ProductList';
-import ProductForm from './components/products/ProductForm';
-import CategoryList from './components/categories/CategoryList';
 import SimpleTemplateList from './components/templates/SimpleTemplateList';
 import SimpleTemplateEditor from './components/templates/SimpleTemplateEditor';
 import TemplateList from './components/templates/TemplateList';
@@ -93,12 +90,6 @@ function App() {
     if (currentPath === '/clientes') {
       return <CustomerList />;
     }
-    if (currentPath === '/productos') {
-      return <ProductList />;
-    }
-    if (currentPath === '/categorias') {
-      return <CategoryList />;
-    }
     if (currentPath === '/plantillas') {
       return <TemplateList 
         onEdit={(id) => window.location.hash = `/plantillas/${id || 'nuevo'}/editar`}
@@ -143,24 +134,6 @@ function App() {
     }
     if (currentPath === '/pedidos') {
       return <OrderList />;
-    }
-    if (currentPath === '/productos/nuevo') {
-      return (
-        <ProductForm 
-          onBack={() => window.location.hash = '/productos'}
-          onSave={() => window.location.hash = '/productos'}
-        />
-      );
-    }
-    if (currentPath.startsWith('/productos/') && currentPath.endsWith('/editar')) {
-      const productId = currentPath.split('/')[2];
-      return (
-        <ProductForm 
-          productId={productId}
-          onBack={() => window.location.hash = `/productos/${productId}`}
-          onSave={() => window.location.hash = `/productos/${productId}`}
-        />
-      );
     }
     if (currentPath === '/clientes/nuevo') {
       return (

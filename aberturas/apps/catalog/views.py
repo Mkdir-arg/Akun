@@ -97,24 +97,16 @@ class ProductTemplateViewSet(viewsets.ModelViewSet):
             
         data = serializer.validated_data
         
-        # Validar selecciones
-        calculator = PricingCalculatorService(template)
-        validation_errors = calculator.validate_selections(data['selections'])
-        
-        if validation_errors:
-            return Response({'errors': validation_errors}, status=status.HTTP_400_BAD_REQUEST)
-            
         try:
-            result = calculator.calculate_preview_pricing(
+            result = AttributeOption.calculate_pricing(
+                template_id=template.id,
                 selections=data['selections'],
-                width_mm=data.get('width_mm'),
-                height_mm=data.get('height_mm'),
                 currency=data.get('currency', 'ARS'),
-                iva_pct=Decimal(str(data.get('iva_pct', 21.0)))
+                iva_pct=float(data.get('iva_pct', 21.0))
             )
             return Response(result)
             
-        except ValueError as e:
+        except (ValueError, ValidationError) as e:
             return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
 
 
