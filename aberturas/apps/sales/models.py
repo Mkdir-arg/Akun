@@ -30,7 +30,7 @@ class Presupuesto(models.Model):
     
     # Relaciones
     customer = models.ForeignKey('crm.Cliente', on_delete=models.PROTECT, related_name='quotes')
-    price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
+    # price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_quotes')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_quotes')
     
@@ -98,7 +98,7 @@ class Presupuesto(models.Model):
 class LineaPresupuesto(models.Model):
     """Línea de presupuesto"""
     quote = models.ForeignKey(Presupuesto, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT, null=True, blank=True)
+    # product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT, null=True, blank=True)
     
     # Especificaciones del producto
     description = models.TextField(blank=True)  # Descripción personalizada
@@ -185,7 +185,7 @@ class Pedido(models.Model):
     # Relaciones
     customer = models.ForeignKey('crm.Cliente', on_delete=models.PROTECT, related_name='orders')
     quote = models.ForeignKey(Presupuesto, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
-    price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
+    # price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_orders')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_orders')
     
@@ -258,7 +258,7 @@ class Pedido(models.Model):
         order = cls.objects.create(
             customer=quote.customer,
             quote=quote,
-            price_list=quote.price_list,
+            # price_list=quote.price_list,
             created_by=created_by,
             type='FROM_QUOTE',
             title=f'Pedido desde {quote.number}',
@@ -270,7 +270,7 @@ class Pedido(models.Model):
         for quote_item in quote.items.all():
             LineaPedido.objects.create(
                 order=order,
-                product=quote_item.product,
+                # product=quote_item.product,
                 description=quote_item.description,
                 width_mm=quote_item.width_mm,
                 height_mm=quote_item.height_mm,
@@ -294,7 +294,7 @@ class Pedido(models.Model):
 class LineaPedido(models.Model):
     """Línea de pedido"""
     order = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
-    product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT)
+    # product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT)
     
     # Especificaciones del producto
     description = models.TextField(blank=True)

@@ -1,10 +1,9 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
 from django.shortcuts import get_object_or_404
 from django.db import transaction
-from decimal import Decimal
+from django.core.exceptions import ValidationError
 
 from .models import ProductTemplate, TemplateAttribute, AttributeOption
 from .serializers import (
@@ -12,12 +11,11 @@ from .serializers import (
     TemplateAttributeSerializer, AttributeOptionSerializer,
     PreviewPricingRequestSerializer, ReorderSerializer
 )
-from .services import PricingCalculatorService
 
 
 class ProductTemplateViewSet(viewsets.ModelViewSet):
     queryset = ProductTemplate.objects.all()
-    permission_classes = []  # Temporalmente sin permisos
+    permission_classes = []  # Sin permisos por ahora
     
     def get_serializer_class(self):
         if self.action == 'list':
@@ -68,7 +66,18 @@ class ProductTemplateViewSet(viewsets.ModelViewSet):
                     type=attr.type,
                     is_required=attr.is_required,
                     order=attr.order,
-                    rules_json=attr.rules_json
+                    render_variant=attr.render_variant,
+                    rules_json=attr.rules_json,
+                    min_value=attr.min_value,
+                    max_value=attr.max_value,
+                    step_value=attr.step_value,
+                    unit_label=attr.unit_label,
+                    min_width=attr.min_width,
+                    max_width=attr.max_width,
+                    min_height=attr.min_height,
+                    max_height=attr.max_height,
+                    step_mm=attr.step_mm,
+                    rebaje_vidrio_mm=attr.rebaje_vidrio_mm
                 )
                 
                 for option in attr.options.all():
@@ -80,7 +89,10 @@ class ProductTemplateViewSet(viewsets.ModelViewSet):
                         price_value=option.price_value,
                         currency=option.currency,
                         order=option.order,
-                        is_default=option.is_default
+                        is_default=option.is_default,
+                        swatch_hex=option.swatch_hex,
+                        icon=option.icon,
+                        qty_attr_code=option.qty_attr_code
                     )
                     
         serializer = ProductTemplateSerializer(new_template)
@@ -112,7 +124,7 @@ class ProductTemplateViewSet(viewsets.ModelViewSet):
 
 class TemplateAttributeViewSet(viewsets.ModelViewSet):
     serializer_class = TemplateAttributeSerializer
-    permission_classes = []  # Temporalmente sin permisos
+    permission_classes = []
     
     def get_queryset(self):
         template_id = self.request.query_params.get('template_id')
@@ -149,7 +161,7 @@ class TemplateAttributeViewSet(viewsets.ModelViewSet):
 
 class AttributeOptionViewSet(viewsets.ModelViewSet):
     serializer_class = AttributeOptionSerializer
-    permission_classes = []  # Temporalmente sin permisos
+    permission_classes = []
     
     def get_queryset(self):
         attribute_id = self.request.query_params.get('attribute_id')

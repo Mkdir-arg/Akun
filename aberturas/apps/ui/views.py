@@ -9,6 +9,11 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.contrib.auth import login, logout
 from apps.accounts.serializers import LoginSerializer, UserSerializer
+from apps.catalog.models import ProductTemplate
+from apps.sales.models import Pedido
+from django.contrib.auth import get_user_model
+
+User = get_user_model()
 
 
 class DashboardView(LoginRequiredMixin, TemplateView):
@@ -19,7 +24,7 @@ class DashboardView(LoginRequiredMixin, TemplateView):
         context.update({
             'total_users': 0,  # Placeholder
             'total_orders': 0,  # Placeholder
-            'total_products': 0,  # Placeholder
+            'total_templates': 0,  # Placeholder
         })
         return context
 
@@ -79,9 +84,9 @@ class DashboardAPIView(APIView):
         return Response({
             'user': UserSerializer(request.user).data,
             'stats': {
-                'total_users': 25,
-                'total_orders': 142,
-                'total_products': 89,
-                'revenue': 45600
+                'total_users': User.objects.count(),
+                'total_orders': Pedido.objects.count(),
+                'total_templates': ProductTemplate.objects.count(),
+                'revenue': 45600  # Mantener hardcodeado por ahora
             }
         })

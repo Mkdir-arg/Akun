@@ -1,8 +1,5 @@
 from rest_framework import serializers
-from .models import (
-    ProductTemplate, TemplateAttribute, AttributeOption, 
-    ProductClass, AttributeType, PricingMode
-)
+from .models import ProductTemplate, TemplateAttribute, AttributeOption
 
 
 class AttributeOptionSerializer(serializers.ModelSerializer):

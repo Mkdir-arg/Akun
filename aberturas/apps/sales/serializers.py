@@ -1,7 +1,6 @@
 from rest_framework import serializers
 from .models import Presupuesto, LineaPresupuesto, Pedido, LineaPedido
 from apps.crm.serializers import ClienteSerializer
-from apps.catalog.serializers import ProductoSerializer
 
 
 class LineaPresupuestoSerializer(serializers.ModelSerializer):
@@ -9,9 +8,8 @@ class LineaPresupuestoSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     
     def get_product_name(self, obj):
-        if obj.product:
-            return f"{obj.product.medida.name} {obj.product.color.name} {obj.product.linea.name}"
-        return ""
+        # Ya no hay productos físicos, solo descripción
+        return obj.description or ""
     assigned_to_name = serializers.CharField(source='assigned_to.get_full_name', read_only=True)
     
     class Meta:
@@ -73,9 +71,8 @@ class LineaPedidoSerializer(serializers.ModelSerializer):
     product_sku = serializers.CharField(source='product.sku', read_only=True)
     
     def get_product_name(self, obj):
-        if obj.product:
-            return f"{obj.product.medida.name} {obj.product.color.name} {obj.product.linea.name}"
-        return ""
+        # Ya no hay productos físicos, solo descripción
+        return obj.description or ""
     
     class Meta:
         model = LineaPedido

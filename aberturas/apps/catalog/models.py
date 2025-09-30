@@ -1,11 +1,8 @@
 from django.db import models
 from django.core.exceptions import ValidationError
 from decimal import Decimal
-import json
 from typing import Dict, Any
 
-
-# ============ MODELOS PARA PLANTILLAS ============
 
 class ProductClass(models.TextChoices):
     VENTANA = "VENTANA", "Ventana"
