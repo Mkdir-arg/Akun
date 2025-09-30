@@ -62,7 +62,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({ onEdit, onPreview })
   };
 
   const handleDelete = async (templateId: number) => {
-    if (!confirm('¿Estás seguro de eliminar esta plantilla?')) return;
+    if (!window.confirm('¿Estás seguro de eliminar esta plantilla?')) return;
 
     try {
       const response = await fetch(`/api/templates/${templateId}/`, {
