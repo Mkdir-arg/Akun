@@ -1,0 +1,55 @@
+[
+{
+  "model": "sales.presupuesto",
+  "pk": 1,
+  "fields": {
+    "number": "PRES-000001",
+    "uuid": "a0dd0d64-21f7-447c-952f-e59230bea67b",
+    "customer": 1,
+    "created_by": 1,
+    "assigned_to": null,
+    "status": "DRAFT",
+    "priority": "MEDIUM",
+    "valid_until": null,
+    "description": "Presupuesto de prueba con plantillas",
+    "notes": "",
+    "subtotal": "0.00",
+    "discount_amount": "0.00",
+    "tax_amount": "0.00",
+    "total": "0.00",
+    "created_at": "2025-10-01T16:24:27.509Z",
+    "updated_at": "2025-10-01T16:24:27.509Z"
+  }
+},
+{
+  "model": "sales.lineapresupuesto",
+  "pk": 1,
+  "fields": {
+    "quote": 1,
+    "template": 1,
+    "template_config": {
+      "dim": {
+        "width_mm": 1200,
+        "height_mm": 1500
+      },
+      "hoja": "54",
+      "linea": "A30",
+      "marco": "45",
+      "cantidad": 2,
+      "interior": "75",
+      "mosquitero": true
+    },
+    "description": "Dinámico - Línea A30 - 1200x1500mm - (Mosquitero)",
+    "quantity": "2.000",
+    "unit_price": "0.00",
+    "discount_pct": "0.00",
+    "tax_rate": "21.00",
+    "subtotal": "0.00",
+    "discount_amount": "0.00",
+    "tax_amount": "0.00",
+    "total": "0.00",
+    "line_number": 1,
+    "assigned_to": null
+  }
+}
+]

@@ -1,0 +1,26 @@
+[
+{
+  "model": "crm.cliente",
+  "pk": 1,
+  "fields": {
+    "code": "TEST001",
+    "type": "EMPRESA",
+    "name": "Cliente de Prueba",
+    "tax_id": null,
+    "email": "test@example.com",
+    "phone": null,
+    "provincia": "",
+    "localidad": "",
+    "municipio": "",
+    "calle": "",
+    "numero": "",
+    "codigo_postal": "",
+    "status": "ACTIVO",
+    "etiqueta": null,
+    "notes": "",
+    "is_active": true,
+    "created_at": "2025-10-01T16:24:27.492Z",
+    "updated_at": "2025-10-01T16:24:27.492Z"
+  }
+}
+]

@@ -1,0 +1,266 @@
+[
+{
+  "model": "catalog.templateattribute",
+  "pk": 1,
+  "fields": {
+    "template": 1,
+    "name": "Línea",
+    "code": "linea",
+    "type": "SELECT",
+    "is_required": true,
+    "order": 1,
+    "render_variant": "select",
+    "rules_json": {
+      "filters_next": [
+        "marco"
+      ],
+      "dynamic_source": "api/lineas/"
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 2,
+  "fields": {
+    "template": 1,
+    "name": "Marco",
+    "code": "marco",
+    "type": "SELECT",
+    "is_required": true,
+    "order": 2,
+    "render_variant": "select",
+    "rules_json": {
+      "depends_on": [
+        "linea"
+      ],
+      "filters_next": [
+        "hoja"
+      ],
+      "dynamic_source": "api/marcos/"
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 3,
+  "fields": {
+    "template": 1,
+    "name": "Hoja",
+    "code": "hoja",
+    "type": "SELECT",
+    "is_required": true,
+    "order": 3,
+    "render_variant": "select",
+    "rules_json": {
+      "depends_on": [
+        "marco"
+      ],
+      "filters_next": [
+        "interior"
+      ],
+      "dynamic_source": "api/hojas/"
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 4,
+  "fields": {
+    "template": 1,
+    "name": "Interior",
+    "code": "interior",
+    "type": "SELECT",
+    "is_required": true,
+    "order": 4,
+    "render_variant": "select",
+    "rules_json": {
+      "depends_on": [
+        "hoja"
+      ],
+      "dynamic_source": "api/interiores/",
+      "enables_options": [
+        "contravidrio",
+        "vidrio_repartido"
+      ]
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 5,
+  "fields": {
+    "template": 1,
+    "name": "Dimensiones",
+    "code": "dimensiones",
+    "type": "DIMENSIONS_MM",
+    "is_required": true,
+    "order": 5,
+    "render_variant": "select",
+    "rules_json": {},
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": 300,
+    "max_width": 3000,
+    "min_height": 400,
+    "max_height": 2500,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 6,
+  "fields": {
+    "template": 1,
+    "name": "Cantidad",
+    "code": "cantidad",
+    "type": "QUANTITY",
+    "is_required": true,
+    "order": 6,
+    "render_variant": "select",
+    "rules_json": {},
+    "min_value": "1.0000",
+    "max_value": "100.0000",
+    "step_value": "1.0000",
+    "unit_label": "unidades",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 7,
+  "fields": {
+    "template": 1,
+    "name": "Contravidrio",
+    "code": "contravidrio",
+    "type": "BOOLEAN",
+    "is_required": false,
+    "order": 7,
+    "render_variant": "select",
+    "rules_json": {
+      "depends_on": [
+        "interior"
+      ],
+      "conditional": true,
+      "check_availability": "api/opciones/?interior_id={interior}"
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 8,
+  "fields": {
+    "template": 1,
+    "name": "Mosquitero",
+    "code": "mosquitero",
+    "type": "BOOLEAN",
+    "is_required": false,
+    "order": 8,
+    "render_variant": "select",
+    "rules_json": {
+      "depends_on": [
+        "hoja"
+      ],
+      "conditional": true,
+      "check_availability": "api/opciones/?hoja_id={hoja}"
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+},
+{
+  "model": "catalog.templateattribute",
+  "pk": 9,
+  "fields": {
+    "template": 1,
+    "name": "Vidrio Repartido",
+    "code": "vidrio_repartido",
+    "type": "BOOLEAN",
+    "is_required": false,
+    "order": 9,
+    "render_variant": "select",
+    "rules_json": {
+      "depends_on": [
+        "interior"
+      ],
+      "conditional": true,
+      "check_availability": "api/opciones/?interior_id={interior}"
+    },
+    "min_value": null,
+    "max_value": null,
+    "step_value": null,
+    "unit_label": "",
+    "min_width": null,
+    "max_width": null,
+    "min_height": null,
+    "max_height": null,
+    "step_mm": 10,
+    "rebaje_vidrio_mm": 0
+  }
+}
+]
