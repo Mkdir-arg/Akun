@@ -1,0 +1,402 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agregar Ítem - {{ presupuesto.number }}</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 30px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        .template-selector { display: grid; grid-template-columns: 1fr 2fr; gap: 20px; }
+        .template-list { border: 1px solid #ddd; border-radius: 4px; max-height: 400px; overflow-y: auto; }
+        .template-item { padding: 15px; border-bottom: 1px solid #eee; cursor: pointer; }
+        .template-item:hover { background-color: #f5f5f5; }
+        .template-item.selected { background-color: #e3f2fd; }
+        .template-config { border: 1px solid #ddd; border-radius: 4px; padding: 20px; }
+        .config-section { margin-bottom: 20px; }
+        .price-display { background: #e8f5e8; padding: 15px; border-radius: 4px; margin: 20px 0; }
+        .btn { padding: 10px 20px; border: none; border-radius: 4px; cursor: pointer; }
+        .btn-primary { background: #007bff; color: white; }
+        .btn-secondary { background: #6c757d; color: white; }
+        .hidden { display: none; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>Agregar Ítem a {{ presupuesto.number }}</h1>
+        <a href="{% url 'sales:presupuesto_detail' presupuesto.pk %}" class="btn btn-secondary">Volver</a>
+    </div>
+
+    <div class="template-selector">
+        <!-- Lista de plantillas -->
+        <div>
+            <h3>Seleccionar Plantilla</h3>
+            <div class="template-list" id="templateList">
+                {% for template in templates %}
+                <div class="template-item" data-template-id="{{ template.id }}" onclick="selectTemplate({{ template.id }})">
+                    <strong>{{ template.line_name }}</strong><br>
+                    <small>{{ template.product_class }} - {{ template.code }}</small>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Configurador de plantilla -->
+        <div>
+            <h3>Configurar Producto</h3>
+            <div class="template-config" id="templateConfig">
+                <p>Selecciona una plantilla para configurar</p>
+            </div>
+
+            <!-- Precio calculado -->
+            <div class="price-display hidden" id="priceDisplay">
+                <h4>Precio Calculado</h4>
+                <div id="priceDetails"></div>
+            </div>
+
+            <!-- Cantidad y botones -->
+            <div class="form-group">
+                <label for="quantity">Cantidad:</label>
+                <input type="number" id="quantity" min="1" value="1" onchange="updatePrice()">
+            </div>
+
+            <button class="btn btn-primary" onclick="addToQuote()" id="addBtn" disabled>
+                Agregar al Presupuesto
+            </button>
+        </div>
+    </div>
+
+    <script>
+        let selectedTemplate = null;
+        let currentConfig = {};
+
+        function selectTemplate(templateId) {
+            // Marcar como seleccionado
+            document.querySelectorAll('.template-item').forEach(item => {
+                item.classList.remove('selected');
+            });
+            document.querySelector(`[data-template-id="${templateId}"]`).classList.add('selected');
+
+            selectedTemplate = templateId;
+            loadTemplateConfig(templateId);
+        }
+
+        async function loadTemplateConfig(templateId) {
+            const configDiv = document.getElementById('templateConfig');
+            configDiv.innerHTML = '<p class="loading">Cargando configuración...</p>';
+
+            try {
+                // Cargar configuración de plantilla (usar el sistema de filtrado dinámico)
+                configDiv.innerHTML = `
+                    <div class="config-section">
+                        <label for="linea">Línea:</label>
+                        <select id="linea" onchange="updateConfig('linea', this.value)">
+                            <option value="">Seleccionar línea...</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-section">
+                        <label for="marco">Marco:</label>
+                        <select id="marco" onchange="updateConfig('marco', this.value)" disabled>
+                            <option value="">Primero selecciona una línea</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-section">
+                        <label for="hoja">Hoja:</label>
+                        <select id="hoja" onchange="updateConfig('hoja', this.value)" disabled>
+                            <option value="">Primero selecciona un marco</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-section">
+                        <label for="interior">Interior:</label>
+                        <select id="interior" onchange="updateConfig('interior', this.value)" disabled>
+                            <option value="">Primero selecciona una hoja</option>
+                        </select>
+                    </div>
+                    
+                    <div class="config-section">
+                        <label>Dimensiones (mm):</label>
+                        <div style="display: flex; gap: 10px;">
+                            <input type="number" id="width" placeholder="Ancho" min="300" max="3000" step="10" onchange="updateDimensions()">
+                            <input type="number" id="height" placeholder="Alto" min="400" max="2500" step="10" onchange="updateDimensions()">
+                        </div>
+                    </div>
+                    
+                    <div class="config-section hidden" id="contravidrio-section">
+                        <label>
+                            <input type="checkbox" id="contravidrio" onchange="updateConfig('contravidrio', this.checked)">
+                            Contravidrio
+                        </label>
+                    </div>
+                    
+                    <div class="config-section hidden" id="mosquitero-section">
+                        <label>
+                            <input type="checkbox" id="mosquitero" onchange="updateConfig('mosquitero', this.checked)">
+                            Mosquitero
+                        </label>
+                    </div>
+                    
+                    <div class="config-section hidden" id="vidrio_repartido-section">
+                        <label>
+                            <input type="checkbox" id="vidrio_repartido" onchange="updateConfig('vidrio_repartido', this.checked)">
+                            Vidrio Repartido
+                        </label>
+                    </div>
+                `;
+
+                // Cargar líneas
+                loadLineas();
+                document.getElementById('addBtn').disabled = false;
+
+            } catch (error) {
+                configDiv.innerHTML = '<p>Error cargando configuración</p>';
+                console.error('Error:', error);
+            }
+        }
+
+        async function loadLineas() {
+            try {
+                const response = await fetch('/catalog/api/lineas/');
+                const data = await response.json();
+                
+                const select = document.getElementById('linea');
+                select.innerHTML = '<option value="">Seleccionar línea...</option>';
+                
+                data.lineas.forEach(linea => {
+                    const option = document.createElement('option');
+                    option.value = linea.code;
+                    option.textContent = linea.label;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error cargando líneas:', error);
+            }
+        }
+
+        function updateConfig(key, value) {
+            currentConfig[key] = value;
+            
+            // Lógica de filtrado en cascada
+            if (key === 'linea' && value) {
+                loadMarcos(value);
+                resetDownstream(['marco', 'hoja', 'interior']);
+            } else if (key === 'marco' && value) {
+                loadHojas(value);
+                resetDownstream(['hoja', 'interior']);
+            } else if (key === 'hoja' && value) {
+                loadInteriores(value);
+                resetDownstream(['interior']);
+            } else if (key === 'interior' && value) {
+                checkOpciones(currentConfig.hoja, value);
+            }
+            
+            updatePrice();
+        }
+        
+        function resetDownstream(fields) {
+            fields.forEach(field => {
+                const select = document.getElementById(field);
+                if (select) {
+                    select.innerHTML = `<option value="">Seleccionar ${field}...</option>`;
+                    select.disabled = true;
+                    delete currentConfig[field];
+                }
+            });
+            
+            // Ocultar opciones condicionales
+            ['contravidrio', 'mosquitero', 'vidrio_repartido'].forEach(option => {
+                toggleOption(option, false);
+            });
+            
+            updatePrice();
+        }
+
+        function updateDimensions() {
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            
+            if (width && height) {
+                currentConfig.dim = {
+                    width_mm: parseInt(width),
+                    height_mm: parseInt(height)
+                };
+            } else {
+                delete currentConfig.dim;
+            }
+            
+            updatePrice();
+        }
+
+        async function updatePrice() {
+            if (!selectedTemplate || Object.keys(currentConfig).length === 0) {
+                return;
+            }
+
+            try {
+                const quantity = parseInt(document.getElementById('quantity').value) || 1;
+                
+                const response = await fetch('/sales/api/calculate-template-price/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        template_id: selectedTemplate,
+                        template_config: currentConfig,
+                        quantity: quantity
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    const priceDiv = document.getElementById('priceDisplay');
+                    const detailsDiv = document.getElementById('priceDetails');
+                    
+                    detailsDiv.innerHTML = `
+                        <p><strong>Precio Unitario:</strong> $${result.unit_price.toFixed(2)}</p>
+                        <p><strong>Cantidad:</strong> ${result.quantity}</p>
+                        <p><strong>Total:</strong> $${result.total_price.toFixed(2)}</p>
+                    `;
+                    
+                    priceDiv.classList.remove('hidden');
+                }
+
+            } catch (error) {
+                console.error('Error calculando precio:', error);
+            }
+        }
+
+        async function addToQuote() {
+            if (!selectedTemplate) {
+                alert('Selecciona una plantilla');
+                return;
+            }
+
+            const quantity = parseInt(document.getElementById('quantity').value) || 1;
+
+            try {
+                const response = await fetch('/sales/api/add-template-item/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        presupuesto_id: {{ presupuesto.pk }},
+                        template_id: selectedTemplate,
+                        template_config: currentConfig,
+                        quantity: quantity
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('Ítem agregado exitosamente');
+                    window.location.href = '{% url "sales:presupuesto_detail" presupuesto.pk %}';
+                } else {
+                    alert('Error: ' + result.error);
+                }
+
+            } catch (error) {
+                console.error('Error agregando ítem:', error);
+                alert('Error agregando ítem');
+            }
+        }
+
+        // Funciones de filtrado dinámico
+        async function loadMarcos(linea) {
+            try {
+                const response = await fetch(`/catalog/api/marcos/?linea=${encodeURIComponent(linea)}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('marco');
+                select.innerHTML = '<option value="">Seleccionar marco...</option>';
+                select.disabled = false;
+                
+                data.marcos.forEach(marco => {
+                    const option = document.createElement('option');
+                    option.value = marco.code;
+                    option.textContent = marco.label;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error cargando marcos:', error);
+            }
+        }
+
+        async function loadHojas(marcoId) {
+            try {
+                const response = await fetch(`/catalog/api/hojas/?marco_id=${marcoId}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('hoja');
+                select.innerHTML = '<option value="">Seleccionar hoja...</option>';
+                select.disabled = false;
+                
+                data.hojas.forEach(hoja => {
+                    const option = document.createElement('option');
+                    option.value = hoja.code;
+                    option.textContent = hoja.label;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error cargando hojas:', error);
+            }
+        }
+
+        async function loadInteriores(hojaId) {
+            try {
+                const response = await fetch(`/catalog/api/interiores/?hoja_id=${hojaId}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('interior');
+                select.innerHTML = '<option value="">Seleccionar interior...</option>';
+                select.disabled = false;
+                
+                data.interiores.forEach(interior => {
+                    const option = document.createElement('option');
+                    option.value = interior.code;
+                    option.textContent = interior.label;
+                    select.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Error cargando interiores:', error);
+            }
+        }
+
+        async function checkOpciones(hojaId, interiorId) {
+            try {
+                const response = await fetch(`/catalog/api/opciones/?hoja_id=${hojaId}&interior_id=${interiorId}`);
+                const data = await response.json();
+                
+                // Mostrar/ocultar opciones según disponibilidad
+                toggleOption('contravidrio', data.opciones.contravidrio_available);
+                toggleOption('mosquitero', data.opciones.mosquitero_available);
+                toggleOption('vidrio_repartido', data.opciones.vidrio_repartido_available);
+            } catch (error) {
+                console.error('Error verificando opciones:', error);
+            }
+        }
+        
+        function toggleOption(optionName, available) {
+            const section = document.getElementById(`${optionName}-section`);
+            const checkbox = document.getElementById(optionName);
+            
+            if (available) {
+                section.classList.remove('hidden');
+            } else {
+                section.classList.add('hidden');
+                checkbox.checked = false;
+            }
+        }
+    </script>
+</body>
+</html>

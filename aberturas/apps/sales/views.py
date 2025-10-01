@@ -1,255 +1,198 @@
-from rest_framework import viewsets, status, filters
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.db.models import Q
-from django.utils import timezone
-from .models import Presupuesto, LineaPresupuesto, Pedido, LineaPedido
-from .serializers import (
-    PresupuestoSerializer, PresupuestoDetailSerializer, LineaPresupuestoSerializer,
-    PedidoSerializer, PedidoDetailSerializer, LineaPedidoSerializer
-)
+from django.shortcuts import render, get_object_or_404, redirect
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Presupuesto, LineaPresupuesto
+from apps.catalog.models import ProductTemplate
+from apps.crm.models import Cliente
+import json
 
+@login_required
+def presupuesto_list(request):
+    """Lista de presupuestos"""
+    presupuestos = Presupuesto.objects.select_related('customer', 'created_by').all()
+    return render(request, 'sales/presupuesto_list.html', {
+        'presupuestos': presupuestos
+    })
 
-class PresupuestoViewSet(viewsets.ModelViewSet):
-    queryset = Presupuesto.objects.select_related('customer', 'created_by', 'assigned_to').prefetch_related('items')
-    permission_classes = []  # Temporalmente sin permisos
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['number', 'customer__name', 'customer__tax_id']
-    ordering_fields = ['number', 'created_at', 'valid_until', 'total']
-    ordering = ['-created_at']
-    
-    def update(self, request, *args, **kwargs):
-        print(f"DEBUG PATCH - Request data: {request.data}")
-        partial = kwargs.pop('partial', False)
-        instance = self.get_object()
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        print(f"DEBUG PATCH - Serializer is_valid: {serializer.is_valid()}")
-        if not serializer.is_valid():
-            print(f"DEBUG PATCH - Serializer errors: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        self.perform_update(serializer)
-        return Response(serializer.data)
-    
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return PresupuestoDetailSerializer
-        return PresupuestoSerializer
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
+@login_required
+def presupuesto_detail(request, pk):
+    """Detalle de presupuesto"""
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
+    return render(request, 'sales/presupuesto_detail.html', {
+        'presupuesto': presupuesto
+    })
+
+@login_required
+def presupuesto_create(request):
+    """Crear nuevo presupuesto"""
+    if request.method == 'POST':
+        customer_id = request.POST.get('customer_id')
+        description = request.POST.get('description', '')
         
-        # Filtros
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-            
-        priority = self.request.query_params.get('priority')
-        if priority:
-            queryset = queryset.filter(priority=priority)
-            
-        customer = self.request.query_params.get('customer')
-        if customer:
-            queryset = queryset.filter(customer=customer)
-            
-        assigned_to = self.request.query_params.get('assigned_to')
-        if assigned_to:
-            queryset = queryset.filter(assigned_to=assigned_to)
-            
-        return queryset
+        if not customer_id:
+            messages.error(request, 'Cliente requerido')
+            return redirect('sales:presupuesto_create')
+        
+        customer = get_object_or_404(Cliente, pk=customer_id)
+        
+        presupuesto = Presupuesto.objects.create(
+            customer=customer,
+            created_by=request.user,
+            description=description
+        )
+        
+        messages.success(request, f'Presupuesto {presupuesto.number} creado exitosamente')
+        return redirect('sales:presupuesto_detail', pk=presupuesto.pk)
     
-    def create(self, request, *args, **kwargs):
-        print(f"DEBUG - Request data: {request.data}")
-        serializer = self.get_serializer(data=request.data)
-        print(f"DEBUG - Serializer is_valid: {serializer.is_valid()}")
-        if not serializer.is_valid():
-            print(f"DEBUG - Serializer errors: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
+    clientes = Cliente.objects.filter(is_active=True).order_by('name')
+    return render(request, 'sales/presupuesto_form.html', {
+        'clientes': clientes
+    })
+
+@login_required
+def presupuesto_add_item(request, pk):
+    """Agregar ítem basado en plantilla al presupuesto"""
+    presupuesto = get_object_or_404(Presupuesto, pk=pk)
     
-    def perform_create(self, serializer):
-        from apps.accounts.models import User
-        user = self.request.user if self.request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
-        serializer.save(created_by=user)
-    
-    @action(detail=True, methods=['post'])
-    def convert_to_order(self, request, pk=None):
-        """Convertir presupuesto a pedido"""
-        quote = self.get_object()
-        print(f"DEBUG - Converting quote {quote.id} to order")
+    if request.method == 'POST':
+        template_id = request.POST.get('template_id')
+        template_config = request.POST.get('template_config', '{}')
+        quantity = request.POST.get('quantity', 1)
+        
+        if not template_id:
+            messages.error(request, 'Plantilla requerida')
+            return redirect('sales:presupuesto_add_item', pk=pk)
         
         try:
-            order = Pedido.create_from_quote(
-                quote=quote,
-                created_by=request.user if request.user.is_authenticated else None
+            template = ProductTemplate.objects.get(pk=template_id)
+            config = json.loads(template_config)
+            
+            # Obtener el siguiente número de línea
+            last_line = presupuesto.items.order_by('-line_number').first()
+            line_number = (last_line.line_number + 1) if last_line else 1
+            
+            # Crear línea de presupuesto
+            LineaPresupuesto.objects.create(
+                quote=presupuesto,
+                template=template,
+                template_config=config,
+                quantity=quantity,
+                line_number=line_number
             )
-            print(f"DEBUG - Order created: {order.id} - {order.number}")
-            return Response({
-                'message': 'Presupuesto convertido a pedido exitosamente',
-                'order_id': order.id,
-                'order_number': order.number
-            })
-        except Exception as e:
-            print(f"DEBUG - Error creating order: {e}")
-            return Response(
-                {'error': str(e)},
-                status=status.HTTP_400_BAD_REQUEST
-            )
+            
+            messages.success(request, 'Ítem agregado al presupuesto')
+            return redirect('sales:presupuesto_detail', pk=pk)
+            
+        except (ProductTemplate.DoesNotExist, json.JSONDecodeError) as e:
+            messages.error(request, f'Error: {str(e)}')
     
-    @action(detail=True, methods=['post'])
-    def send(self, request, pk=None):
-        """Marcar presupuesto como enviado"""
-        quote = self.get_object()
-        quote.status = 'SENT'
-        quote.save()
-        return Response({'message': 'Presupuesto marcado como enviado'})
-    
-    @action(detail=True, methods=['post'])
-    def approve(self, request, pk=None):
-        """Aprobar presupuesto"""
-        quote = self.get_object()
-        quote.status = 'APPROVED'
-        quote.save()
-        return Response({'message': 'Presupuesto aprobado'})
-    
-    @action(detail=True, methods=['post'])
-    def reject(self, request, pk=None):
-        """Rechazar presupuesto"""
-        quote = self.get_object()
-        quote.status = 'REJECTED'
-        quote.save()
-        return Response({'message': 'Presupuesto rechazado'})
+    templates = ProductTemplate.objects.filter(is_active=True).order_by('line_name', 'product_class')
+    return render(request, 'sales/presupuesto_add_item.html', {
+        'presupuesto': presupuesto,
+        'templates': templates
+    })
 
-
-class LineaPresupuestoViewSet(viewsets.ModelViewSet):
-    serializer_class = LineaPresupuestoSerializer
-    permission_classes = []  # Temporalmente sin permisos
-    
-    def get_queryset(self):
-        queryset = LineaPresupuesto.objects.select_related('quote', 'product')
-        quote_id = self.request.query_params.get('quote')
-        if quote_id:
-            queryset = queryset.filter(quote=quote_id)
-        return queryset
-    
-    def create(self, request, *args, **kwargs):
-        print(f"DEBUG QuoteItem - Request data: {request.data}")
-        serializer = self.get_serializer(data=request.data)
-        print(f"DEBUG QuoteItem - Serializer is_valid: {serializer.is_valid()}")
-        if not serializer.is_valid():
-            print(f"DEBUG QuoteItem - Serializer errors: {serializer.errors}")
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(serializer.data, status=status.HTTP_201_CREATED, headers=headers)
-
-
-class PedidoViewSet(viewsets.ModelViewSet):
-    queryset = Pedido.objects.select_related('customer', 'quote', 'created_by', 'assigned_to').prefetch_related('items')
-    permission_classes = []  # Temporalmente sin permisos
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['number', 'title', 'customer__name', 'customer__tax_id']
-    ordering_fields = ['number', 'order_date', 'delivery_date', 'total']
-    ordering = ['-created_at']
-    
-    def get_serializer_class(self):
-        if self.action == 'retrieve':
-            return PedidoDetailSerializer
-        return PedidoSerializer
-    
-    def get_queryset(self):
-        queryset = super().get_queryset()
+@csrf_exempt
+@require_http_methods(["POST"])
+def add_template_item(request):
+    """API para agregar ítem basado en plantilla"""
+    try:
+        data = json.loads(request.body)
         
-        # Filtros
-        status_filter = self.request.query_params.get('status')
-        if status_filter:
-            queryset = queryset.filter(status=status_filter)
-            
-        payment_status = self.request.query_params.get('payment_status')
-        if payment_status:
-            queryset = queryset.filter(payment_status=payment_status)
-            
-        customer = self.request.query_params.get('customer')
-        if customer:
-            queryset = queryset.filter(customer=customer)
-            
-        order_type = self.request.query_params.get('type')
-        if order_type:
-            queryset = queryset.filter(type=order_type)
-            
-        return queryset
-    
-    def perform_create(self, serializer):
-        from apps.accounts.models import User
-        user = self.request.user if self.request.user.is_authenticated else User.objects.filter(is_superuser=True).first()
-        serializer.save(created_by=user)
-    
-    @action(detail=True, methods=['post'])
-    def confirm(self, request, pk=None):
-        """Confirmar pedido"""
-        order = self.get_object()
-        order.status = 'CONFIRMED'
-        order.save()
-        return Response({'message': 'Pedido confirmado'})
-    
-    @action(detail=True, methods=['post'])
-    def start_production(self, request, pk=None):
-        """Iniciar producción"""
-        order = self.get_object()
-        order.status = 'IN_PRODUCTION'
-        order.save()
-        return Response({'message': 'Producción iniciada'})
-    
-    @action(detail=True, methods=['post'])
-    def mark_ready(self, request, pk=None):
-        """Marcar como listo"""
-        order = self.get_object()
-        order.status = 'READY'
-        order.save()
-        return Response({'message': 'Pedido marcado como listo'})
-    
-    @action(detail=True, methods=['post'])
-    def deliver(self, request, pk=None):
-        """Marcar como entregado"""
-        order = self.get_object()
-        order.status = 'DELIVERED'
-        order.delivered_at = timezone.now()
-        order.save()
-        return Response({'message': 'Pedido marcado como entregado'})
-    
-    @action(detail=True, methods=['post'])
-    def cancel(self, request, pk=None):
-        """Cancelar pedido"""
-        order = self.get_object()
-        order.status = 'CANCELLED'
-        order.save()
-        return Response({'message': 'Pedido cancelado'})
-
-
-class LineaPedidoViewSet(viewsets.ModelViewSet):
-    serializer_class = LineaPedidoSerializer
-    permission_classes = []  # Temporalmente sin permisos
-    
-    def get_queryset(self):
-        queryset = LineaPedido.objects.select_related('order', 'product')
-        order_id = self.request.query_params.get('order')
-        if order_id:
-            queryset = queryset.filter(order=order_id)
-        return queryset
-    
-    @action(detail=True, methods=['post'])
-    def update_production_status(self, request, pk=None):
-        """Actualizar estado de producción"""
-        item = self.get_object()
-        new_status = request.data.get('production_status')
+        presupuesto_id = data.get('presupuesto_id')
+        template_id = data.get('template_id')
+        template_config = data.get('template_config', {})
+        quantity = data.get('quantity', 1)
         
-        if new_status in ['PENDING', 'IN_PROGRESS', 'COMPLETED']:
-            item.production_status = new_status
-            item.save()
-            return Response({'message': f'Estado actualizado a {new_status}'})
+        if not all([presupuesto_id, template_id]):
+            return JsonResponse({'error': 'Presupuesto ID y Template ID requeridos'}, status=400)
         
-        return Response(
-            {'error': 'Estado de producción inválido'},
-            status=status.HTTP_400_BAD_REQUEST
+        presupuesto = get_object_or_404(Presupuesto, pk=presupuesto_id)
+        template = get_object_or_404(ProductTemplate, pk=template_id)
+        
+        # Obtener el siguiente número de línea
+        last_line = presupuesto.items.order_by('-line_number').first()
+        line_number = (last_line.line_number + 1) if last_line else 1
+        
+        # Crear línea de presupuesto
+        linea = LineaPresupuesto.objects.create(
+            quote=presupuesto,
+            template=template,
+            template_config=template_config,
+            quantity=quantity,
+            line_number=line_number
         )
+        
+        return JsonResponse({
+            'success': True,
+            'line_id': linea.id,
+            'line_number': linea.line_number,
+            'description': linea.description,
+            'unit_price': float(linea.unit_price),
+            'total': float(linea.total),
+            'presupuesto_total': float(presupuesto.total)
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_templates(request):
+    """API para obtener plantillas disponibles"""
+    product_class = request.GET.get('product_class')
+    
+    templates = ProductTemplate.objects.filter(is_active=True)
+    
+    if product_class:
+        templates = templates.filter(product_class=product_class)
+    
+    templates_data = []
+    for template in templates:
+        templates_data.append({
+            'id': template.id,
+            'code': template.code,
+            'line_name': template.line_name,
+            'product_class': template.product_class,
+            'requires_dimensions': template.requires_dimensions,
+            'base_price_net': float(template.base_price_net)
+        })
+    
+    return JsonResponse({'templates': templates_data})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def calculate_template_price(request):
+    """API para calcular precio de plantilla con configuración específica"""
+    try:
+        data = json.loads(request.body)
+        
+        template_id = data.get('template_id')
+        template_config = data.get('template_config', {})
+        quantity = data.get('quantity', 1)
+        
+        if not template_id:
+            return JsonResponse({'error': 'Template ID requerido'}, status=400)
+        
+        template = get_object_or_404(ProductTemplate, pk=template_id)
+        
+        # Calcular precio usando el método de AttributeOption
+        from apps.catalog.models import AttributeOption
+        pricing = AttributeOption.calculate_pricing(template_id, template_config)
+        
+        # Calcular total con cantidad
+        unit_price = pricing['price']['gross']
+        total_price = unit_price * quantity
+        
+        return JsonResponse({
+            'success': True,
+            'unit_price': unit_price,
+            'total_price': total_price,
+            'quantity': quantity,
+            'pricing_details': pricing
+        })
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

@@ -1,72 +1,124 @@
-.PHONY: help build up down logs migrate superuser shell tailwind lint format resetdb
+# Makefile para el Sistema de Aberturas
+
+.PHONY: help build up down restart logs shell migrate fixtures backup clean
+
+# Variables
+COMPOSE_FILE = docker-compose.yml
+SERVICE_WEB = web
+SERVICE_DB = db
 
 help: ## Mostrar ayuda
-	@echo "Comandos disponibles:"
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
+	@echo "Sistema de Aberturas - Comandos disponibles:"
+	@echo ""
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
 
+# Docker
 build: ## Construir contenedores
-	docker-compose build
+	docker compose -f $(COMPOSE_FILE) build
 
 up: ## Levantar servicios
-	docker-compose up -d
+	docker compose -f $(COMPOSE_FILE) up -d
 
 down: ## Bajar servicios
-	docker-compose down
+	docker compose -f $(COMPOSE_FILE) down
+
+restart: ## Reiniciar servicios
+	docker compose -f $(COMPOSE_FILE) restart
 
 logs: ## Ver logs
-	docker-compose logs -f web
+	docker compose -f $(COMPOSE_FILE) logs -f $(SERVICE_WEB)
 
+shell: ## Acceder al shell del contenedor web
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) bash
+
+# Base de datos
 migrate: ## Ejecutar migraciones
-	docker-compose exec web python manage.py migrate
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py migrate
 
 makemigrations: ## Crear migraciones
-	docker-compose exec web python manage.py makemigrations
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py makemigrations
 
-superuser: ## Crear superusuario
-	docker-compose exec web python manage.py createsuperuser
+dbshell: ## Acceder al shell de la base de datos
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_DB) mysql -u root -p akun
 
-shell: ## Abrir shell de Django
-	docker-compose exec web python manage.py shell
+# Fixtures y backups
+fixtures: ## Crear fixtures del sistema
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python create_complete_fixtures.py
 
-tailwind: ## Compilar CSS con Tailwind
-	docker-compose --profile frontend up node
+fixtures-load: ## Cargar fixtures del sistema
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py load_system_fixtures --complete
 
-tailwind-build: ## Compilar CSS para producción
-	cd frontend && npm run build
+backup: ## Crear backup de la base de datos
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py backup_database --include-data
 
-lint: ## Ejecutar linters
-	docker-compose exec web ruff check .
-	docker-compose exec web black --check .
-	docker-compose exec web isort --check-only .
+backup-structure: ## Crear backup solo estructura
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py backup_database
 
-format: ## Formatear código
-	docker-compose exec web black .
-	docker-compose exec web isort .
+# Desarrollo
+test: ## Ejecutar tests
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py test
 
-resetdb: ## Resetear base de datos (DESARROLLO)
-	docker-compose down
-	docker volume rm aberturas_mysql_data
-	docker-compose up -d db
-	sleep 10
-	docker-compose up -d web
-	docker-compose exec web python manage.py migrate
-	docker-compose exec web python manage.py create_default_groups
+collectstatic: ## Recopilar archivos estáticos
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py collectstatic --noinput
 
-install-dev: ## Instalar dependencias de desarrollo
-	pip install -e ".[dev]"
+# Comandos personalizados
+analyze-db: ## Analizar estructura de la base de datos
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py analyze_database
 
-seed: ## Crear datos de prueba
-	docker-compose exec web python manage.py seed_catalog
-	docker-compose exec web python manage.py seed_crm
+fix-db: ## Corregir problemas de la base de datos
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py fix_database_issues
 
-perms: ## Asignar permisos por grupos
-	docker-compose exec web python manage.py grant_domain_perms
+test-templates: ## Probar sistema de plantillas
+	docker compose -f $(COMPOSE_FILE) exec $(SERVICE_WEB) python manage.py test_presupuesto_plantilla
 
-setup: ## Setup inicial del proyecto
-	cp .env.example .env
-	docker-compose build
-	docker-compose up -d
-	sleep 15
-	docker-compose exec web python manage.py migrate
-	docker-compose exec web python manage.py create_default_groups
-	@echo "Proyecto configurado. Crear superusuario con: make superuser"
+# Limpieza
+clean: ## Limpiar contenedores y volúmenes
+	docker compose -f $(COMPOSE_FILE) down -v
+	docker system prune -f
+
+clean-all: ## Limpieza completa (¡CUIDADO!)
+	docker compose -f $(COMPOSE_FILE) down -v --rmi all
+	docker system prune -af
+
+# Desarrollo local (sin Docker)
+dev-install: ## Instalar dependencias para desarrollo local
+	pip install -r requirements.txt
+
+dev-migrate: ## Migraciones en desarrollo local
+	python manage.py migrate
+
+dev-run: ## Ejecutar servidor de desarrollo local
+	python manage.py runserver
+
+dev-fixtures: ## Crear fixtures en desarrollo local
+	python create_complete_fixtures.py
+
+# Frontend
+frontend-build: ## Construir CSS con Tailwind
+	cd frontend && npm install && npm run build
+
+frontend-watch: ## Modo watch para CSS
+	cd frontend && npm run dev
+
+# Información del sistema
+status: ## Estado de los servicios
+	docker compose -f $(COMPOSE_FILE) ps
+
+info: ## Información del sistema
+	@echo "Sistema de Aberturas"
+	@echo "==================="
+	@echo "Web: http://localhost:8090"
+	@echo "Base de datos: localhost:13306"
+	@echo "Redis: localhost:6380"
+	@echo ""
+	@echo "Usuarios por defecto:"
+	@echo "- admin/admin (superusuario)"
+	@echo ""
+	@echo "Comandos útiles:"
+	@echo "- make up          # Levantar sistema"
+	@echo "- make fixtures    # Crear fixtures"
+	@echo "- make backup      # Backup completo"
+	@echo "- make logs        # Ver logs"
+
+# Instalación completa
+install: build up migrate fixtures info ## Instalación completa del sistema

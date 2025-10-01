@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Filtrado Dinámico - Ventana</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+        .form-group { margin-bottom: 20px; }
+        label { display: block; margin-bottom: 5px; font-weight: bold; }
+        select, input { width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px; }
+        select:disabled, input:disabled { background-color: #f5f5f5; }
+        .checkbox-group { display: flex; align-items: center; gap: 10px; }
+        .checkbox-group input[type="checkbox"] { width: auto; }
+        .hidden { display: none; }
+        .price-result { background: #e8f5e8; padding: 15px; border-radius: 4px; margin-top: 20px; }
+        .loading { color: #666; font-style: italic; }
+    </style>
+</head>
+<body>
+    <h1>🚪 Test Filtrado Dinámico - Ventana</h1>
+    
+    <form id="ventanaForm">
+        <!-- 1. Línea -->
+        <div class="form-group">
+            <label for="linea">Línea:</label>
+            <select id="linea" name="linea" required>
+                <option value="">Seleccionar línea...</option>
+            </select>
+        </div>
+        
+        <!-- 2. Marco -->
+        <div class="form-group">
+            <label for="marco">Marco:</label>
+            <select id="marco" name="marco" required disabled>
+                <option value="">Primero selecciona una línea</option>
+            </select>
+        </div>
+        
+        <!-- 3. Hoja -->
+        <div class="form-group">
+            <label for="hoja">Hoja:</label>
+            <select id="hoja" name="hoja" required disabled>
+                <option value="">Primero selecciona un marco</option>
+            </select>
+        </div>
+        
+        <!-- 4. Interior -->
+        <div class="form-group">
+            <label for="interior">Interior:</label>
+            <select id="interior" name="interior" required disabled>
+                <option value="">Primero selecciona una hoja</option>
+            </select>
+        </div>
+        
+        <!-- 5. Dimensiones -->
+        <div class="form-group">
+            <label>Dimensiones (mm):</label>
+            <div style="display: flex; gap: 10px;">
+                <input type="number" id="width" name="width" placeholder="Ancho" min="300" max="3000" step="10">
+                <input type="number" id="height" name="height" placeholder="Alto" min="400" max="2500" step="10">
+            </div>
+        </div>
+        
+        <!-- 6. Cantidad -->
+        <div class="form-group">
+            <label for="cantidad">Cantidad:</label>
+            <input type="number" id="cantidad" name="cantidad" min="1" max="100" value="1">
+        </div>
+        
+        <!-- 7. Contravidrio (condicional) -->
+        <div class="form-group hidden" id="contravidrio-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="contravidrio" name="contravidrio">
+                <label for="contravidrio">Contravidrio</label>
+            </div>
+        </div>
+        
+        <!-- 8. Mosquitero (condicional) -->
+        <div class="form-group hidden" id="mosquitero-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="mosquitero" name="mosquitero">
+                <label for="mosquitero">Mosquitero</label>
+            </div>
+        </div>
+        
+        <!-- 9. Vidrio Repartido (condicional) -->
+        <div class="form-group hidden" id="vidrio_repartido-group">
+            <div class="checkbox-group">
+                <input type="checkbox" id="vidrio_repartido" name="vidrio_repartido">
+                <label for="vidrio_repartido">Vidrio Repartido</label>
+            </div>
+        </div>
+        
+        <button type="button" onclick="calculatePrice()">Calcular Precio</button>
+    </form>
+    
+    <div id="priceResult" class="price-result hidden">
+        <h3>Resultado:</h3>
+        <div id="priceDetails"></div>
+    </div>
+
+    <script>
+        const API_BASE = '/catalog/api/';
+        
+        // Cargar líneas al inicio
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLineas();
+        });
+        
+        async function loadLineas() {
+            try {
+                const response = await fetch(API_BASE + 'lineas/');
+                const data = await response.json();
+                
+                const select = document.getElementById('linea');
+                select.innerHTML = '<option value="">Seleccionar línea...</option>';
+                
+                data.lineas.forEach(linea => {
+                    const option = document.createElement('option');
+                    option.value = linea.code;
+                    option.textContent = linea.label;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error cargando líneas:', error);
+            }
+        }
+        
+        // Event listeners para filtrado en cascada
+        document.getElementById('linea').addEventListener('change', function() {
+            const linea = this.value;
+            if (linea) {
+                loadMarcos(linea);
+                resetDownstream(['marco', 'hoja', 'interior']);
+            }
+        });
+        
+        document.getElementById('marco').addEventListener('change', function() {
+            const marcoId = this.value;
+            if (marcoId) {
+                loadHojas(marcoId);
+                resetDownstream(['hoja', 'interior']);
+            }
+        });
+        
+        document.getElementById('hoja').addEventListener('change', function() {
+            const hojaId = this.value;
+            if (hojaId) {
+                loadInteriores(hojaId);
+                checkMosquitero(hojaId);
+                resetDownstream(['interior']);
+            }
+        });
+        
+        document.getElementById('interior').addEventListener('change', function() {
+            const interiorId = this.value;
+            if (interiorId) {
+                checkOpciones(document.getElementById('hoja').value, interiorId);
+            }
+        });
+        
+        async function loadMarcos(linea) {
+            try {
+                const response = await fetch(`${API_BASE}marcos/?linea=${encodeURIComponent(linea)}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('marco');
+                select.innerHTML = '<option value="">Seleccionar marco...</option>';
+                select.disabled = false;
+                
+                data.marcos.forEach(marco => {
+                    const option = document.createElement('option');
+                    option.value = marco.code;
+                    option.textContent = marco.label;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error cargando marcos:', error);
+            }
+        }
+        
+        async function loadHojas(marcoId) {
+            try {
+                const response = await fetch(`${API_BASE}hojas/?marco_id=${marcoId}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('hoja');
+                select.innerHTML = '<option value="">Seleccionar hoja...</option>';
+                select.disabled = false;
+                
+                data.hojas.forEach(hoja => {
+                    const option = document.createElement('option');
+                    option.value = hoja.code;
+                    option.textContent = hoja.label;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error cargando hojas:', error);
+            }
+        }
+        
+        async function loadInteriores(hojaId) {
+            try {
+                const response = await fetch(`${API_BASE}interiores/?hoja_id=${hojaId}`);
+                const data = await response.json();
+                
+                const select = document.getElementById('interior');
+                select.innerHTML = '<option value="">Seleccionar interior...</option>';
+                select.disabled = false;
+                
+                data.interiores.forEach(interior => {
+                    const option = document.createElement('option');
+                    option.value = interior.code;
+                    option.textContent = interior.label;
+                    select.appendChild(option);
+                });
+                
+            } catch (error) {
+                console.error('Error cargando interiores:', error);
+            }
+        }
+        
+        async function checkOpciones(hojaId, interiorId) {
+            try {
+                const response = await fetch(`${API_BASE}opciones/?hoja_id=${hojaId}&interior_id=${interiorId}`);
+                const data = await response.json();
+                
+                // Mostrar/ocultar opciones según disponibilidad
+                toggleOption('contravidrio', data.opciones.contravidrio_available);
+                toggleOption('mosquitero', data.opciones.mosquitero_available);
+                toggleOption('vidrio_repartido', data.opciones.vidrio_repartido_available);
+                
+            } catch (error) {
+                console.error('Error verificando opciones:', error);
+            }
+        }
+        
+        function toggleOption(optionName, available) {
+            const group = document.getElementById(`${optionName}-group`);
+            const checkbox = document.getElementById(optionName);
+            
+            if (available) {
+                group.classList.remove('hidden');
+            } else {
+                group.classList.add('hidden');
+                checkbox.checked = false;
+            }
+        }
+        
+        function resetDownstream(fields) {
+            fields.forEach(field => {
+                const select = document.getElementById(field);
+                select.innerHTML = `<option value="">Seleccionar ${field}...</option>`;
+                select.disabled = true;
+            });
+            
+            // Ocultar opciones condicionales
+            ['contravidrio', 'mosquitero', 'vidrio_repartido'].forEach(option => {
+                toggleOption(option, false);
+            });
+        }
+        
+        async function calculatePrice() {
+            // Recopilar datos del formulario
+            const formData = new FormData(document.getElementById('ventanaForm'));
+            const selections = {};
+            
+            for (let [key, value] of formData.entries()) {
+                if (value) {
+                    selections[key] = value;
+                }
+            }
+            
+            // Agregar dimensiones
+            const width = document.getElementById('width').value;
+            const height = document.getElementById('height').value;
+            if (width && height) {
+                selections.dim = {
+                    width_mm: parseInt(width),
+                    height_mm: parseInt(height)
+                };
+            }
+            
+            try {
+                const response = await fetch(`${API_BASE}calculate/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        template_id: 1, // ID de la plantilla creada
+                        selections: selections
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (response.ok) {
+                    displayPrice(result);
+                } else {
+                    alert('Error: ' + result.error);
+                }
+                
+            } catch (error) {
+                console.error('Error calculando precio:', error);
+                alert('Error calculando precio');
+            }
+        }
+        
+        function displayPrice(result) {
+            const resultDiv = document.getElementById('priceResult');
+            const detailsDiv = document.getElementById('priceDetails');
+            
+            let html = `
+                <p><strong>Precio Neto:</strong> $${result.price.net.toFixed(2)}</p>
+                <p><strong>IVA:</strong> $${result.price.tax.toFixed(2)}</p>
+                <p><strong>Precio Final:</strong> $${result.price.gross.toFixed(2)}</p>
+                <p><strong>Moneda:</strong> ${result.currency}</p>
+            `;
+            
+            if (result.calc.area_m2) {
+                html += `<p><strong>Área:</strong> ${result.calc.area_m2} m²</p>`;
+            }
+            
+            detailsDiv.innerHTML = html;
+            resultDiv.classList.remove('hidden');
+        }
+    </script>
+</body>
+</html>

@@ -1,196 +1,79 @@
-from rest_framework import viewsets, status
-from rest_framework.decorators import action
-from rest_framework.response import Response
-from django.shortcuts import get_object_or_404
-from django.db import transaction
-from django.core.exceptions import ValidationError
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+from .services.template_filter_service import TemplateFilterService
+import json
 
-from .models import ProductTemplate, TemplateAttribute, AttributeOption
-from .serializers import (
-    ProductTemplateSerializer, ProductTemplateListSerializer,
-    TemplateAttributeSerializer, AttributeOptionSerializer,
-    PreviewPricingRequestSerializer, ReorderSerializer
-)
+@require_http_methods(["GET"])
+def get_lineas(request):
+    """API para obtener líneas disponibles"""
+    lineas = TemplateFilterService.get_lineas()
+    return JsonResponse({'lineas': lineas})
 
-
-class ProductTemplateViewSet(viewsets.ModelViewSet):
-    queryset = ProductTemplate.objects.all()
-    permission_classes = []  # Sin permisos por ahora
+@require_http_methods(["GET"])
+def get_marcos(request):
+    """API para obtener marcos por línea"""
+    linea = request.GET.get('linea')
+    if not linea:
+        return JsonResponse({'error': 'Línea requerida'}, status=400)
     
-    def get_serializer_class(self):
-        if self.action == 'list':
-            return ProductTemplateListSerializer
-        return ProductTemplateSerializer
-        
-    def get_queryset(self):
-        queryset = ProductTemplate.objects.all()
-        
-        # Filtros
-        product_class = self.request.query_params.get('class')
-        line_name = self.request.query_params.get('line_name')
-        is_active = self.request.query_params.get('active')
-        
-        if product_class:
-            queryset = queryset.filter(product_class=product_class)
-        if line_name:
-            queryset = queryset.filter(line_name__icontains=line_name)
-        if is_active is not None:
-            queryset = queryset.filter(is_active=is_active.lower() == 'true')
-            
-        return queryset.order_by('-created_at')
-        
-    @action(detail=True, methods=['post'])
-    def clone(self, request, pk=None):
-        """Clona una plantilla creando una nueva versión"""
-        template = self.get_object()
-        
-        with transaction.atomic():
-            # Crear nueva versión
-            new_version = ProductTemplate.objects.filter(line_name=template.line_name).count() + 1
-            new_template = ProductTemplate.objects.create(
-                product_class=template.product_class,
-                line_name=template.line_name,
-                code=f"{template.code}-v{new_version}",
-                base_price_net=template.base_price_net,
-                currency=template.currency,
-                requires_dimensions=template.requires_dimensions,
-                version=new_version
-            )
-            
-            # Clonar atributos y opciones
-            for attr in template.attributes.all():
-                new_attr = TemplateAttribute.objects.create(
-                    template=new_template,
-                    name=attr.name,
-                    code=attr.code,
-                    type=attr.type,
-                    is_required=attr.is_required,
-                    order=attr.order,
-                    render_variant=attr.render_variant,
-                    rules_json=attr.rules_json,
-                    min_value=attr.min_value,
-                    max_value=attr.max_value,
-                    step_value=attr.step_value,
-                    unit_label=attr.unit_label,
-                    min_width=attr.min_width,
-                    max_width=attr.max_width,
-                    min_height=attr.min_height,
-                    max_height=attr.max_height,
-                    step_mm=attr.step_mm,
-                    rebaje_vidrio_mm=attr.rebaje_vidrio_mm
-                )
-                
-                for option in attr.options.all():
-                    AttributeOption.objects.create(
-                        attribute=new_attr,
-                        label=option.label,
-                        code=option.code,
-                        pricing_mode=option.pricing_mode,
-                        price_value=option.price_value,
-                        currency=option.currency,
-                        order=option.order,
-                        is_default=option.is_default,
-                        swatch_hex=option.swatch_hex,
-                        icon=option.icon,
-                        qty_attr_code=option.qty_attr_code
-                    )
-                    
-        serializer = ProductTemplateSerializer(new_template)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
-        
-    @action(detail=True, methods=['post'])
-    def preview_pricing(self, request, pk=None):
-        """Calcula preview de precio basado en selecciones"""
-        template = self.get_object()
-        
-        serializer = PreviewPricingRequestSerializer(data=request.data)
-        if not serializer.is_valid():
-            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-            
-        data = serializer.validated_data
-        
-        try:
-            result = AttributeOption.calculate_pricing(
-                template_id=template.id,
-                selections=data['selections'],
-                currency=data.get('currency', 'ARS'),
-                iva_pct=float(data.get('iva_pct', 21.0))
-            )
-            return Response(result)
-            
-        except (ValueError, ValidationError) as e:
-            return Response({'error': str(e)}, status=status.HTTP_400_BAD_REQUEST)
+    marcos = TemplateFilterService.get_marcos(linea)
+    return JsonResponse({'marcos': marcos})
 
-
-class TemplateAttributeViewSet(viewsets.ModelViewSet):
-    serializer_class = TemplateAttributeSerializer
-    permission_classes = []
+@require_http_methods(["GET"])
+def get_hojas(request):
+    """API para obtener hojas por marco"""
+    marco_id = request.GET.get('marco_id')
+    if not marco_id:
+        return JsonResponse({'error': 'Marco ID requerido'}, status=400)
     
-    def get_queryset(self):
-        template_id = self.request.query_params.get('template_id')
-        if template_id:
-            return TemplateAttribute.objects.filter(template_id=template_id)
-        return TemplateAttribute.objects.all()
-        
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        template_id = self.request.query_params.get('template_id') or self.request.data.get('template_id')
-        if template_id:
-            context['template'] = get_object_or_404(ProductTemplate, pk=template_id)
-        return context
-        
-    def perform_create(self, serializer):
-        template_id = self.request.data.get('template_id')
-        template = get_object_or_404(ProductTemplate, pk=template_id)
-        serializer.save(template=template)
-        
-    @action(detail=True, methods=['post'])
-    def reorder(self, request, pk=None):
-        """Reordena un atributo"""
-        attribute = self.get_object()
-        serializer = ReorderSerializer(data=request.data)
-        
-        if serializer.is_valid():
-            new_order = serializer.validated_data['new_order']
-            attribute.order = new_order
-            attribute.save()
-            return Response({'status': 'reordered'})
-            
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    hojas = TemplateFilterService.get_hojas(marco_id)
+    return JsonResponse({'hojas': hojas})
 
-
-class AttributeOptionViewSet(viewsets.ModelViewSet):
-    serializer_class = AttributeOptionSerializer
-    permission_classes = []
+@require_http_methods(["GET"])
+def get_interiores(request):
+    """API para obtener interiores por hoja"""
+    hoja_id = request.GET.get('hoja_id')
+    if not hoja_id:
+        return JsonResponse({'error': 'Hoja ID requerida'}, status=400)
     
-    def get_queryset(self):
-        attribute_id = self.request.query_params.get('attribute_id')
-        if attribute_id:
-            return AttributeOption.objects.filter(attribute_id=attribute_id)
-        return AttributeOption.objects.all()
+    interiores = TemplateFilterService.get_interiores(hoja_id)
+    return JsonResponse({'interiores': interiores})
+
+@require_http_methods(["GET"])
+def get_opciones_disponibles(request):
+    """API para obtener opciones disponibles (contravidrios, mosquiteros, etc.)"""
+    hoja_id = request.GET.get('hoja_id')
+    interior_id = request.GET.get('interior_id')
+    
+    opciones = {}
+    
+    if hoja_id:
+        opciones['mosquitero_available'] = TemplateFilterService.has_mosquiteros(hoja_id)
+    
+    if interior_id:
+        opciones['contravidrio_available'] = TemplateFilterService.has_contravidrios(interior_id)
+        opciones['vidrio_repartido_available'] = TemplateFilterService.has_vidrios_repartidos(interior_id)
+    
+    return JsonResponse({'opciones': opciones})
+
+@csrf_exempt
+@require_http_methods(["POST"])
+def calculate_price(request):
+    """API para calcular precio de plantilla"""
+    try:
+        data = json.loads(request.body)
+        template_id = data.get('template_id')
+        selections = data.get('selections', {})
         
-    def get_serializer_context(self):
-        context = super().get_serializer_context()
-        attribute_id = self.request.query_params.get('attribute_id') or self.request.data.get('attribute_id')
-        if attribute_id:
-            context['attribute'] = get_object_or_404(TemplateAttribute, pk=attribute_id)
-        return context
+        if not template_id:
+            return JsonResponse({'error': 'Template ID requerido'}, status=400)
         
-    def perform_create(self, serializer):
-        attribute_id = self.request.data.get('attribute_id')
-        attribute = get_object_or_404(TemplateAttribute, pk=attribute_id)
-        serializer.save(attribute=attribute)
+        # Usar el método existente de AttributeOption
+        from .models import AttributeOption
+        result = AttributeOption.calculate_pricing(template_id, selections)
         
-    @action(detail=True, methods=['post'])
-    def reorder(self, request, pk=None):
-        """Reordena una opción"""
-        option = self.get_object()
-        serializer = ReorderSerializer(data=request.data)
+        return JsonResponse(result)
         
-        if serializer.is_valid():
-            new_order = serializer.validated_data['new_order']
-            option.order = new_order
-            option.save()
-            return Response({'status': 'reordered'})
-            
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)

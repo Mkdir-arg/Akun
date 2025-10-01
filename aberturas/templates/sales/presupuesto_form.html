@@ -1,0 +1,55 @@
+{% extends 'base.html' %}
+
+{% block title %}Nuevo Presupuesto - Sistema de Aberturas{% endblock %}
+
+{% block content %}
+<div class="container mx-auto max-w-2xl">
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold">Nuevo Presupuesto</h1>
+        <p class="text-base-content/70">Crear un nuevo presupuesto para un cliente</p>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <form method="post">
+                {% csrf_token %}
+                
+                <div class="form-control w-full mb-4">
+                    <label class="label">
+                        <span class="label-text font-semibold">Cliente *</span>
+                    </label>
+                    <select name="customer_id" class="select select-bordered w-full" required>
+                        <option value="">Seleccionar cliente...</option>
+                        {% for cliente in clientes %}
+                            <option value="{{ cliente.id }}">{{ cliente.name }} - {{ cliente.email }}</option>
+                        {% endfor %}
+                    </select>
+                    <label class="label">
+                        <span class="label-text-alt">Selecciona el cliente para este presupuesto</span>
+                    </label>
+                </div>
+
+                <div class="form-control w-full mb-6">
+                    <label class="label">
+                        <span class="label-text font-semibold">Descripción</span>
+                    </label>
+                    <textarea name="description" class="textarea textarea-bordered h-24" placeholder="Descripción opcional del presupuesto..."></textarea>
+                    <label class="label">
+                        <span class="label-text-alt">Descripción opcional para identificar el presupuesto</span>
+                    </label>
+                </div>
+
+                <div class="card-actions justify-end">
+                    <a href="{% url 'sales:presupuesto_list' %}" class="btn btn-ghost">Cancelar</a>
+                    <button type="submit" class="btn btn-primary">
+                        <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                        </svg>
+                        Crear Presupuesto
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}

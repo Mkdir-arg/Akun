@@ -1,12 +1,14 @@
-from django.urls import path, include
-from rest_framework.routers import DefaultRouter
+from django.urls import path
 from . import views
 
-router = DefaultRouter()
-router.register(r'templates', views.ProductTemplateViewSet)
-router.register(r'attributes', views.TemplateAttributeViewSet, basename='attributes')
-router.register(r'options', views.AttributeOptionViewSet, basename='options')
+app_name = 'catalog'
 
 urlpatterns = [
-    path('api/', include(router.urls)),
+    # APIs para filtrado dinámico
+    path('api/lineas/', views.get_lineas, name='get_lineas'),
+    path('api/marcos/', views.get_marcos, name='get_marcos'),
+    path('api/hojas/', views.get_hojas, name='get_hojas'),
+    path('api/interiores/', views.get_interiores, name='get_interiores'),
+    path('api/opciones/', views.get_opciones_disponibles, name='get_opciones'),
+    path('api/calculate/', views.calculate_price, name='calculate_price'),
 ]

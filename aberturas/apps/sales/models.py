@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.exceptions import ValidationError
 from decimal import Decimal
 import uuid
+import json
 
 
 class Presupuesto(models.Model):
@@ -30,7 +31,6 @@ class Presupuesto(models.Model):
     
     # Relaciones
     customer = models.ForeignKey('crm.Cliente', on_delete=models.PROTECT, related_name='quotes')
-    # price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_quotes')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_quotes')
     
@@ -96,20 +96,23 @@ class Presupuesto(models.Model):
 
 
 class LineaPresupuesto(models.Model):
-    """Línea de presupuesto"""
+    """Línea de presupuesto basada en instancia de plantilla"""
     quote = models.ForeignKey(Presupuesto, on_delete=models.CASCADE, related_name='items')
-    # product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT, null=True, blank=True)
     
-    # Especificaciones del producto
-    description = models.TextField(blank=True)  # Descripción personalizada
-    width_mm = models.PositiveIntegerField(null=True, blank=True)
-    height_mm = models.PositiveIntegerField(null=True, blank=True)
+    # Referencia a la plantilla utilizada
+    template = models.ForeignKey('catalog.ProductTemplate', on_delete=models.PROTECT, null=True, blank=True)
+    
+    # Configuración específica (JSON con las selecciones del usuario)
+    template_config = models.JSONField(default=dict, help_text="Configuración específica de la plantilla")
+    
+    # Descripción generada automáticamente
+    description = models.TextField(blank=True)
     
     # Cantidades y precios
     quantity = models.DecimalField(max_digits=10, decimal_places=3, default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    tax_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=21)
     
     # Totales calculados
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -130,7 +133,16 @@ class LineaPresupuesto(models.Model):
         unique_together = ('quote', 'line_number')
     
     def save(self, *args, **kwargs):
-        # El unit_price incluye IVA, calcular subtotal sin IVA
+        # Generar descripción automática si no existe
+        if not self.description and self.template and self.template_config:
+            self.description = self.generate_description()
+        
+        # Calcular precios usando la plantilla
+        if self.template and self.template_config:
+            pricing = self.calculate_template_pricing()
+            self.unit_price = pricing['price']['gross']
+        
+        # Calcular totales
         total_with_tax = self.quantity * self.unit_price
         self.discount_amount = total_with_tax * (self.discount_pct / 100)
         total_after_discount = total_with_tax - self.discount_amount
@@ -145,6 +157,51 @@ class LineaPresupuesto(models.Model):
         
         # Recalcular totales del presupuesto
         self.quote.calculate_totals()
+    
+    def generate_description(self):
+        """Genera descripción automática basada en la configuración"""
+        if not self.template or not self.template_config:
+            return "Producto sin especificar"
+        
+        parts = [self.template.line_name]
+        
+        config = self.template_config
+        
+        # Agregar información clave de la configuración
+        if 'linea' in config:
+            parts.append(f"Línea {config['linea']}")
+        
+        if 'tipo_apertura' in config:
+            parts.append(config['tipo_apertura'])
+        
+        # Agregar dimensiones si existen
+        if 'dim' in config and config['dim']:
+            dim = config['dim']
+            if 'width_mm' in dim and 'height_mm' in dim:
+                parts.append(f"{dim['width_mm']}x{dim['height_mm']}mm")
+        
+        # Agregar opciones seleccionadas
+        opciones = []
+        if config.get('contravidrio'):
+            opciones.append('Contravidrio')
+        if config.get('mosquitero'):
+            opciones.append('Mosquitero')
+        if config.get('vidrio_repartido'):
+            opciones.append('Vidrio Repartido')
+        
+        if opciones:
+            parts.append(f"({', '.join(opciones)})")
+        
+        return " - ".join(parts)
+    
+    def calculate_template_pricing(self):
+        """Calcula el precio usando la plantilla y configuración"""
+        from apps.catalog.models import AttributeOption
+        
+        return AttributeOption.calculate_pricing(
+            self.template.id,
+            self.template_config
+        )
     
     def delete(self, *args, **kwargs):
         quote = self.quote
@@ -185,7 +242,6 @@ class Pedido(models.Model):
     # Relaciones
     customer = models.ForeignKey('crm.Cliente', on_delete=models.PROTECT, related_name='orders')
     quote = models.ForeignKey(Presupuesto, on_delete=models.SET_NULL, null=True, blank=True, related_name='orders')
-    # price_list = models.ForeignKey('catalog.ListaPrecios', on_delete=models.PROTECT, null=True, blank=True)
     created_by = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.PROTECT, related_name='created_orders')
     assigned_to = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True, related_name='assigned_orders')
     
@@ -258,7 +314,6 @@ class Pedido(models.Model):
         order = cls.objects.create(
             customer=quote.customer,
             quote=quote,
-            # price_list=quote.price_list,
             created_by=created_by,
             type='FROM_QUOTE',
             title=f'Pedido desde {quote.number}',
@@ -270,10 +325,9 @@ class Pedido(models.Model):
         for quote_item in quote.items.all():
             LineaPedido.objects.create(
                 order=order,
-                # product=quote_item.product,
+                template=quote_item.template,
+                template_config=quote_item.template_config,
                 description=quote_item.description,
-                width_mm=quote_item.width_mm,
-                height_mm=quote_item.height_mm,
                 quantity=quote_item.quantity,
                 unit_price=quote_item.unit_price,
                 discount_pct=quote_item.discount_pct,
@@ -292,20 +346,23 @@ class Pedido(models.Model):
 
 
 class LineaPedido(models.Model):
-    """Línea de pedido"""
+    """Línea de pedido basada en instancia de plantilla"""
     order = models.ForeignKey(Pedido, on_delete=models.CASCADE, related_name='items')
-    # product = models.ForeignKey('catalog.Producto', on_delete=models.PROTECT)
     
-    # Especificaciones del producto
+    # Referencia a la plantilla utilizada
+    template = models.ForeignKey('catalog.ProductTemplate', on_delete=models.PROTECT, null=True, blank=True)
+    
+    # Configuración específica (JSON con las selecciones del usuario)
+    template_config = models.JSONField(default=dict)
+    
+    # Descripción generada
     description = models.TextField(blank=True)
-    width_mm = models.PositiveIntegerField(null=True, blank=True)
-    height_mm = models.PositiveIntegerField(null=True, blank=True)
     
     # Cantidades y precios
     quantity = models.DecimalField(max_digits=10, decimal_places=3, default=1)
     unit_price = models.DecimalField(max_digits=12, decimal_places=2)
     discount_pct = models.DecimalField(max_digits=5, decimal_places=2, default=0)
-    tax_rate = models.DecimalField(max_digits=5, decimal_places=2)
+    tax_rate = models.DecimalField(max_digits=5, decimal_places=2, default=21)
     
     # Totales calculados
     subtotal = models.DecimalField(max_digits=12, decimal_places=2, default=0)
@@ -328,7 +385,7 @@ class LineaPedido(models.Model):
         unique_together = ('order', 'line_number')
     
     def save(self, *args, **kwargs):
-        # El unit_price incluye IVA, calcular subtotal sin IVA
+        # Calcular totales
         total_with_tax = self.quantity * self.unit_price
         self.discount_amount = total_with_tax * (self.discount_pct / 100)
         total_after_discount = total_with_tax - self.discount_amount

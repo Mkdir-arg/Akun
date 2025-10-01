@@ -1,0 +1,107 @@
+{% extends 'base.html' %}
+
+{% block title %}Presupuestos - Sistema de Aberturas{% endblock %}
+
+{% block content %}
+<div class="container mx-auto">
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h1 class="text-3xl font-bold">Presupuestos</h1>
+            <p class="text-base-content/70">Gestión de presupuestos y cotizaciones</p>
+        </div>
+        <a href="{% url 'sales:presupuesto_create' %}" class="btn btn-primary">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+            </svg>
+            Nuevo Presupuesto
+        </a>
+    </div>
+
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            {% if presupuestos %}
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra">
+                        <thead>
+                            <tr>
+                                <th>Número</th>
+                                <th>Cliente</th>
+                                <th>Descripción</th>
+                                <th>Total</th>
+                                <th>Estado</th>
+                                <th>Fecha</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for presupuesto in presupuestos %}
+                            <tr>
+                                <td>
+                                    <div class="font-bold">{{ presupuesto.number }}</div>
+                                </td>
+                                <td>
+                                    <div class="flex items-center space-x-3">
+                                        <div class="avatar placeholder">
+                                            <div class="bg-neutral-focus text-neutral-content rounded-full w-8">
+                                                <span class="text-xs">{{ presupuesto.customer.name|first|upper }}</span>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div class="font-bold">{{ presupuesto.customer.name }}</div>
+                                            <div class="text-sm opacity-50">{{ presupuesto.customer.email }}</div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div class="max-w-xs truncate">{{ presupuesto.description|default:"Sin descripción" }}</div>
+                                </td>
+                                <td>
+                                    <div class="font-bold text-lg">${{ presupuesto.total|floatformat:2 }}</div>
+                                </td>
+                                <td>
+                                    <div class="badge badge-{% if presupuesto.status == 'draft' %}warning{% elif presupuesto.status == 'sent' %}info{% elif presupuesto.status == 'approved' %}success{% else %}error{% endif %}">
+                                        {{ presupuesto.get_status_display }}
+                                    </div>
+                                </td>
+                                <td>{{ presupuesto.created_at|date:"d/m/Y" }}</td>
+                                <td>
+                                    <div class="flex space-x-2">
+                                        <a href="{% url 'sales:presupuesto_detail' presupuesto.pk %}" class="btn btn-sm btn-ghost">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"></path>
+                                            </svg>
+                                        </a>
+                                        <a href="{% url 'sales:presupuesto_add_item' presupuesto.pk %}" class="btn btn-sm btn-primary">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                                            </svg>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <div class="text-center py-12">
+                    <svg class="mx-auto h-12 w-12 text-base-content/40" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path>
+                    </svg>
+                    <h3 class="mt-2 text-sm font-medium">No hay presupuestos</h3>
+                    <p class="mt-1 text-sm text-base-content/60">Comienza creando tu primer presupuesto.</p>
+                    <div class="mt-6">
+                        <a href="{% url 'sales:presupuesto_create' %}" class="btn btn-primary">
+                            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
+                            </svg>
+                            Nuevo Presupuesto
+                        </a>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
