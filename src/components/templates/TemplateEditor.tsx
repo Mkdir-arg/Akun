@@ -83,7 +83,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onSa
       const response = await fetch(`/api/templates/${id}/`);
       if (response.ok) {
         const data = await response.json();
-        setTemplate(data);
+        setTemplate(data.template || data);
       }
     } catch (error) {
       console.error('Error fetching template:', error);
@@ -241,7 +241,7 @@ export const TemplateEditor: React.FC<TemplateEditorProps> = ({ templateId, onSa
                 </tr>
               </thead>
               <tbody>
-                {template.attributes.map((attr, index) => (
+                {(template.attributes || []).map((attr, index) => (
                   <tr key={attr.id || index}>
                     <td className="border p-2">{attr.type}</td>
                     <td className="border p-2">{attr.name}</td>

@@ -259,51 +259,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({ onEdit, onPreview })
               {selectedLine ? (
                 // Nivel 3: Productos específicos de la línea seleccionada
                 (() => {
-                  let lineTemplates: ProductTemplate[] = [];
-                  
-                  // Filtrar productos según la categoría y línea seleccionada
-                  switch(selectedProductClass) {
-                    case 'VENTANAS':
-                      lineTemplates = templates.filter(t => t.product_class === 'VENTANA' && t.line_name === selectedLine);
-                      break;
-                    case 'PUERTAS':
-                      lineTemplates = templates.filter(t => t.product_class === 'PUERTA' && t.line_name === selectedLine);
-                      break;
-                    case 'PAÑOS FIJOS':
-                      lineTemplates = templates.filter(t => 
-                        (t.line_name?.toLowerCase().includes('paño fijo') || t.line_name?.toLowerCase().includes('fijo')) &&
-                        t.line_name === selectedLine
-                      );
-                      break;
-                    case 'ACCESORIOS':
-                      lineTemplates = templates.filter(t => 
-                        (t.product_class === 'ACCESORIO' || 
-                         t.line_name?.toLowerCase().includes('tapajuntas') || 
-                         t.line_name?.toLowerCase().includes('premarco')) &&
-                        t.line_name === selectedLine
-                      );
-                      break;
-                    case 'OTROS TIPOS':
-                      lineTemplates = templates.filter(t => 
-                        (t.line_name?.toLowerCase().includes('banderola') || 
-                         t.line_name?.toLowerCase().includes('oscilobatiente') || 
-                         t.line_name?.toLowerCase().includes('desplazable')) &&
-                        t.line_name === selectedLine
-                      );
-                      break;
-                    case 'ESPECIALES':
-                      lineTemplates = templates.filter(t => 
-                        (t.line_name?.toLowerCase().includes('proyectante') || 
-                         t.line_name?.toLowerCase().includes('mampara') || 
-                         t.line_name?.toLowerCase().includes('postigo') || 
-                         t.line_name?.toLowerCase().includes('ventiluz')) &&
-                        t.line_name === selectedLine
-                      );
-                      break;
-                    default:
-                      lineTemplates = templates.filter(t => t.line_name === selectedLine);
-                  }
-                  
+                  const lineTemplates = templates.filter(t => t.product_class === selectedProductClass && t.line_name === selectedLine);
                   return lineTemplates.map((template) => (
                     <tr key={template.id} className="hover:bg-gray-50">
                       <td className="px-6 py-4 whitespace-nowrap">
@@ -433,7 +389,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({ onEdit, onPreview })
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={(e) => { e.stopPropagation(); setShowNewTemplateForm(true); }}
+                            onClick={(e) => { e.stopPropagation(); onEdit?.(0); }}
                             className="text-blue-600 hover:text-blue-800"
                             title="Nueva plantilla"
                           >
@@ -488,7 +444,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({ onEdit, onPreview })
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex justify-end gap-2">
                           <button
-                            onClick={(e) => { e.stopPropagation(); setShowNewTemplateForm(true); }}
+                            onClick={(e) => { e.stopPropagation(); onEdit?.(0); }}
                             className="text-blue-600 hover:text-blue-800"
                             title="Nueva plantilla"
                           >
@@ -512,7 +468,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({ onEdit, onPreview })
               <p className="text-sm">Crea tu primera plantilla para comenzar</p>
             </div>
             <button
-              onClick={() => setShowNewTemplateForm(true)}
+              onClick={() => onEdit?.(0)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg"
             >
               Crear plantilla
@@ -529,51 +485,7 @@ export const TemplateList: React.FC<TemplateListProps> = ({ onEdit, onPreview })
               ← Volver a líneas
             </button>
             <div className="text-sm text-gray-700">
-              {selectedProductClass} - {selectedLine}: {(() => {
-                let count = 0;
-                switch(selectedProductClass) {
-                  case 'VENTANAS':
-                    count = templates.filter(t => t.product_class === 'VENTANA' && t.line_name === selectedLine).length;
-                    break;
-                  case 'PUERTAS':
-                    count = templates.filter(t => t.product_class === 'PUERTA' && t.line_name === selectedLine).length;
-                    break;
-                  case 'PAÑOS FIJOS':
-                    count = templates.filter(t => 
-                      (t.line_name?.toLowerCase().includes('paño fijo') || t.line_name?.toLowerCase().includes('fijo')) &&
-                      t.line_name === selectedLine
-                    ).length;
-                    break;
-                  case 'ACCESORIOS':
-                    count = templates.filter(t => 
-                      (t.product_class === 'ACCESORIO' || 
-                       t.line_name?.toLowerCase().includes('tapajuntas') || 
-                       t.line_name?.toLowerCase().includes('premarco')) &&
-                      t.line_name === selectedLine
-                    ).length;
-                    break;
-                  case 'OTROS TIPOS':
-                    count = templates.filter(t => 
-                      (t.line_name?.toLowerCase().includes('banderola') || 
-                       t.line_name?.toLowerCase().includes('oscilobatiente') || 
-                       t.line_name?.toLowerCase().includes('desplazable')) &&
-                      t.line_name === selectedLine
-                    ).length;
-                    break;
-                  case 'ESPECIALES':
-                    count = templates.filter(t => 
-                      (t.line_name?.toLowerCase().includes('proyectante') || 
-                       t.line_name?.toLowerCase().includes('mampara') || 
-                       t.line_name?.toLowerCase().includes('postigo') || 
-                       t.line_name?.toLowerCase().includes('ventiluz')) &&
-                      t.line_name === selectedLine
-                    ).length;
-                    break;
-                  default:
-                    count = templates.filter(t => t.line_name === selectedLine).length;
-                }
-                return count;
-              })()} productos
+              {selectedProductClass} - {selectedLine}: {templates.filter(t => t.product_class === selectedProductClass && t.line_name === selectedLine).length} productos
             </div>
           </div>
         )}

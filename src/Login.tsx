@@ -47,10 +47,10 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
         src="/login-wave.svg"
         alt=""
         aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 w-full max-w-none pointer-events-none select-none"
+        className="absolute inset-x-0 bottom-0 w-full pointer-events-none select-none"
       />
       <div className="relative w-full max-w-md z-10">
-        <div className="relative bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-6 sm:p-8 border border-white/20">
+        <div className="bg-white/80 backdrop-blur-sm shadow-2xl rounded-3xl p-6 sm:p-8 border border-white/20">
           {/* Header */}
           <div className="text-center mb-8">
             <div className="w-20 h-20 sm:w-28 sm:h-28 mx-auto mb-4 flex items-center justify-center">
@@ -58,6 +58,7 @@ const Login: React.FC<LoginProps> = ({ onLoginSuccess }) => {
                 src="/AKUN-LOGO.webp" 
                 alt="AKUN Logo" 
                 className="w-full h-full object-contain"
+                loading="eager"
               />
             </div>
             <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 mb-2">Bienvenido a AKUN</h1>

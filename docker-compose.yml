@@ -31,14 +31,14 @@ services:
       - FAST_REFRESH=true
       - GENERATE_SOURCEMAP=false
       - TSC_COMPILE_ON_ERROR=true
+      - CI=true
     volumes:
       - .:/app
       - /app/node_modules
     stdin_open: true
     tty: true
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
 
   # MySQL Database - Comentado para usar DB local
   # db:

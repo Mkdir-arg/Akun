@@ -162,6 +162,55 @@ def get_templates(request):
     
     return JsonResponse({'templates': templates_data})
 
+@require_http_methods(["GET"])
+def get_template_detail(request, template_id):
+    """API para obtener detalle de una plantilla específica"""
+    try:
+        template = get_object_or_404(ProductTemplate, pk=template_id)
+        
+        # Obtener atributos con opciones
+        attributes_data = []
+        for attr in template.attributes.all().order_by('order'):
+            attr_data = {
+                'id': attr.id,
+                'name': attr.name,
+                'code': attr.code,
+                'type': attr.type,
+                'is_required': attr.is_required,
+                'order': attr.order
+            }
+            
+            if attr.type == 'SELECT':
+                attr_data['options'] = [
+                    {
+                        'id': opt.id,
+                        'code': opt.code,
+                        'label': opt.label,
+                        'price_value': float(opt.price_value),
+                        'order': opt.order
+                    }
+                    for opt in attr.options.all().order_by('order')
+                ]
+            
+            attributes_data.append(attr_data)
+        
+        template_data = {
+            'id': template.id,
+            'code': template.code,
+            'line_name': template.line_name,
+            'product_class': template.product_class,
+            'requires_dimensions': template.requires_dimensions,
+            'base_price_net': float(template.base_price_net),
+            'is_active': template.is_active,
+            'version': template.version,
+            'attributes': attributes_data
+        }
+        
+        return JsonResponse({'template': template_data})
+        
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def calculate_template_price(request):

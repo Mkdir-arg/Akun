@@ -11,4 +11,5 @@ urlpatterns = [
     path('api/interiores/', views.get_interiores, name='get_interiores'),
     path('api/opciones/', views.get_opciones_disponibles, name='get_opciones'),
     path('api/calculate/', views.calculate_price, name='calculate_price'),
+    path('api/templates/<int:template_id>/associated/', views.get_associated_products, name='get_associated_products'),
 ]

@@ -12,6 +12,7 @@ urlpatterns = [
     
     # APIs
     path('api/templates/', views.get_templates, name='get_templates'),
+    path('api/templates/<int:template_id>/', views.get_template_detail, name='get_template_detail'),
     path('api/add-template-item/', views.add_template_item, name='add_template_item'),
     path('api/calculate-template-price/', views.calculate_template_price, name='calculate_template_price'),
 ]

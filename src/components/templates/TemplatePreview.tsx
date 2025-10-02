@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { Calculator } from 'lucide-react';
 
 interface PricingBreakdown {
   source: string;
@@ -72,9 +71,21 @@ interface TemplatePreviewProps {
 export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ templateId }) => {
   const [template, setTemplate] = useState<ProductTemplate | null>(null);
   const [selections, setSelections] = useState<Record<string, any>>({});
-  const [pricing, setPricing] = useState<PricingResult | null>(null);
   const [loading, setLoading] = useState(true);
-  const [calculating, setCalculating] = useState(false);
+
+  const fetchTemplate = async () => {
+    try {
+      const response = await fetch(`/api/templates/${templateId}/`);
+      if (response.ok) {
+        const data = await response.json();
+        setTemplate(data.template);
+      }
+    } catch (error) {
+      console.error('Error fetching template:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchTemplate();
@@ -86,9 +97,12 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ templateId }) 
       const defaults: Record<string, any> = {};
       template.attributes.forEach(attr => {
         if (attr.type === 'SELECT') {
-          const defaultOption = attr.options.find(opt => opt.is_default);
+          const defaultOption = attr.options?.find(opt => opt.is_default);
           if (defaultOption) {
             defaults[attr.code] = defaultOption.code;
+          } else if (attr.options && attr.options.length > 0) {
+            // Si no hay default, usar la primera opción
+            defaults[attr.code] = attr.options[0].code;
           }
         } else if (attr.type === 'BOOLEAN') {
           defaults[attr.code] = false;
@@ -98,58 +112,16 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ templateId }) 
             height_mm: attr.min_height || 1000
           };
         } else if (attr.type === 'NUMBER' || attr.type === 'QUANTITY') {
-          defaults[attr.code] = attr.min_value || 0;
+          defaults[attr.code] = attr.min_value || 1;
         }
       });
       setSelections(defaults);
     }
   }, [template]);
 
-  useEffect(() => {
-    if (template && Object.keys(selections).length > 0) {
-      calculatePricing();
-    }
-  }, [selections, template]);
 
-  const fetchTemplate = async () => {
-    try {
-      const response = await fetch(`/api/templates/${templateId}/`);
-      if (response.ok) {
-        const data = await response.json();
-        setTemplate(data);
-      }
-    } catch (error) {
-      console.error('Error fetching template:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const calculatePricing = async () => {
-    if (!template) return;
 
-    setCalculating(true);
-    try {
-      const response = await fetch(`/api/templates/${templateId}/preview_pricing/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          selections,
-          currency: 'ARS',
-          iva_pct: 21.0
-        })
-      });
-
-      if (response.ok) {
-        const result = await response.json();
-        setPricing(result);
-      }
-    } catch (error) {
-      console.error('Error calculating pricing:', error);
-    } finally {
-      setCalculating(false);
-    }
-  };
 
   const handleSelectionChange = (attrCode: string, value: any) => {
     setSelections(prev => ({
@@ -277,104 +249,181 @@ export const TemplatePreview: React.FC<TemplatePreviewProps> = ({ templateId }) 
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+    <div className="min-h-screen bg-gray-50 p-4">
+      <div className="max-w-full mx-auto space-y-4">
         {/* Configuration Panel */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-lg shadow-sm border">
-            <div className="p-6 border-b">
-              <h2 className="text-xl font-semibold">
-                {template.product_class} - {template.line_name}
-              </h2>
-              <p className="text-gray-600">Configurador de producto</p>
-            </div>
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <h2 className="text-2xl font-bold text-gray-800">
+              {template.product_class} - {template.line_name}
+            </h2>
+            <p className="text-gray-600 mt-1">Configurador de producto</p>
+          </div>
 
-            <div className="p-6 space-y-6">
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
               {template.attributes.map(attr => (
-                <div key={attr.id}>
-                  <label className="block text-sm font-medium mb-2">
+                <div key={attr.id} className="space-y-2">
+                  <label className="block text-sm font-semibold text-gray-700">
                     {attr.name}
                     {attr.is_required && <span className="text-red-500 ml-1">*</span>}
                   </label>
-                  {renderAttributeInput(attr)}
+                  <div className="w-full">
+                    {renderAttributeInput(attr)}
+                  </div>
                 </div>
               ))}
             </div>
           </div>
         </div>
-
-        {/* Pricing Panel */}
-        <div className="lg:col-span-1">
-          <div className="bg-white rounded-lg shadow-sm border sticky top-6">
-            <div className="p-4 border-b">
-              <h3 className="text-lg font-semibold flex items-center gap-2">
-                <Calculator size={20} />
-                Cotización
-              </h3>
-            </div>
-
-            <div className="p-4">
-              {calculating ? (
-                <div className="text-center py-4">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-sm text-gray-600 mt-2">Calculando...</p>
-                </div>
-              ) : pricing ? (
-                <div className="space-y-4">
-                  {/* Calculations */}
-                  {pricing.calc.area_m2 && (
-                    <div className="text-sm">
-                      <span className="text-gray-600">Área:</span>
-                      <span className="font-medium ml-2">{pricing.calc.area_m2} m²</span>
-                    </div>
-                  )}
-                  {pricing.calc.perimeter_m && (
-                    <div className="text-sm">
-                      <span className="text-gray-600">Perímetro:</span>
-                      <span className="font-medium ml-2">{pricing.calc.perimeter_m} m</span>
-                    </div>
-                  )}
-
-                  {/* Price Summary */}
-                  <div className="border-t pt-4">
-                    <div className="space-y-2">
-                      <div className="flex justify-between">
-                        <span>Subtotal:</span>
-                        <span>${pricing.price.net.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>IVA (21%):</span>
-                        <span>${pricing.price.tax.toLocaleString()}</span>
-                      </div>
-                      <div className="flex justify-between font-bold text-lg border-t pt-2">
-                        <span>Total:</span>
-                        <span>${pricing.price.gross.toLocaleString()}</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Breakdown */}
-                  <div className="border-t pt-4">
-                    <h4 className="font-medium mb-2">Desglose:</h4>
-                    <div className="space-y-1 text-sm">
-                      {pricing.breakdown.map((item, index) => (
-                        <div key={index} className="flex justify-between">
-                          <span className="text-gray-600">{item.source}:</span>
-                          <span>${item.value.toLocaleString()}</span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-4 text-gray-500">
-                  Complete la configuración para ver el precio
-                </div>
-              )}
-            </div>
+        
+        {/* Related Products */}
+        <div className="bg-white rounded-lg shadow-lg border border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 bg-gradient-to-r from-green-50 to-emerald-50">
+            <h3 className="text-xl font-bold text-gray-800">
+              Productos Relacionados - {template.line_name}
+            </h3>
+          </div>
+          <div className="p-6">
+            <RelatedProducts lineName={template.line_name} currentTemplateId={template.id} />
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Componente para productos asociados
+interface AssociatedProduct {
+  id: number;
+  product_class: string;
+  line_name: string;
+  code: string;
+  base_price_net: number;
+  currency: string;
+  relationship_type: string;
+}
+
+interface AssociatedProductsData {
+  main_product: {
+    id: number;
+    product_class: string;
+    line_name: string;
+    code: string;
+  };
+  associated_products: AssociatedProduct[];
+}
+
+const RelatedProducts: React.FC<{ lineName: string; currentTemplateId: number }> = ({ lineName, currentTemplateId }) => {
+  const [associatedData, setAssociatedData] = useState<AssociatedProductsData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAssociatedProducts = async () => {
+      try {
+        const response = await fetch(`/catalog/api/templates/${currentTemplateId}/associated/`);
+        if (response.ok) {
+          const data = await response.json();
+          setAssociatedData(data);
+        }
+      } catch (error) {
+        console.error('Error fetching associated products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchAssociatedProducts();
+  }, [currentTemplateId]);
+
+  if (loading) {
+    return <div className="text-sm text-gray-500">Cargando productos relacionados...</div>;
+  }
+
+  if (!associatedData || associatedData.associated_products.length === 0) {
+    return <div className="text-sm text-gray-500">No hay productos asociados</div>;
+  }
+
+
+
+  const getClassBadge = (productClass: string) => {
+    const colors: Record<string, string> = {
+      'VENTANA': 'bg-blue-100 text-blue-800',
+      'PUERTA': 'bg-green-100 text-green-800',
+      'PANO_FIJO': 'bg-purple-100 text-purple-800',
+      'ACCESORIO': 'bg-orange-100 text-orange-800'
+    };
+    
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${colors[productClass] || 'bg-gray-100 text-gray-800'}`}>
+        {productClass}
+      </span>
+    );
+  };
+  
+  const getRelationshipBadge = (relationshipType: string) => {
+    const colors: Record<string, string> = {
+      'ACCESORIO_LINEA': 'bg-yellow-100 text-yellow-800',
+      'COMPLEMENTARIO': 'bg-green-100 text-green-800'
+    };
+    
+    const labels: Record<string, string> = {
+      'ACCESORIO_LINEA': 'Accesorio',
+      'COMPLEMENTARIO': 'Complementario'
+    };
+    
+    return (
+      <span className={`inline-flex px-2 py-1 text-xs font-medium rounded ${colors[relationshipType] || 'bg-gray-100 text-gray-800'}`}>
+        {labels[relationshipType] || relationshipType}
+      </span>
+    );
+  };
+
+  return (
+    <div className="w-full">
+      <div className="overflow-x-auto shadow-sm rounded-lg border border-gray-200">
+        <table className="w-full text-sm bg-white">
+          <thead className="bg-gray-50">
+            <tr>
+              <th className="text-left py-4 px-6 font-semibold text-gray-700 border-b">Tipo / Relación</th>
+              <th className="text-left py-4 px-6 font-semibold text-gray-700 border-b">Código</th>
+              <th className="text-right py-4 px-6 font-semibold text-gray-700 border-b">Precio Base</th>
+              <th className="text-center py-4 px-6 font-semibold text-gray-700 border-b">Acciones</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-gray-200">
+            {associatedData.associated_products.map((product) => (
+              <tr key={product.id} className="hover:bg-blue-50 transition-colors duration-150">
+                <td className="py-4 px-6">
+                  <div className="flex flex-col gap-1">
+                    {getClassBadge(product.product_class)}
+                    {getRelationshipBadge(product.relationship_type)}
+                  </div>
+                </td>
+                <td className="py-4 px-6 font-medium text-gray-900">
+                  {product.code.split('-').slice(-2).join('-')}
+                </td>
+                <td className="py-4 px-6 text-right font-semibold text-gray-700">
+                  ${product.base_price_net.toLocaleString()}
+                </td>
+                <td className="py-4 px-6 text-center">
+                  <a 
+                    href={`#/plantillas/${product.id}/preview`}
+                    className="inline-flex items-center px-3 py-1 rounded-md text-sm font-medium bg-blue-100 text-blue-700 hover:bg-blue-200 transition-colors duration-150"
+                  >
+                    Ver Detalle
+                  </a>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {associatedData.associated_products.length > 0 && (
+        <div className="text-sm text-gray-500 text-center mt-4 py-2">
+          {associatedData.associated_products.length} productos asociados encontrados
+        </div>
+      )}
     </div>
   );
 };

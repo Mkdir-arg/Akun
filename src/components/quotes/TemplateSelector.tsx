@@ -196,8 +196,8 @@ const TemplateSelector: React.FC<Props> = ({ onAddItem, onCancel }) => {
         <div>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <h3 className="text-lg font-semibold">{selectedTemplate.line_name}</h3>
-              <p className="text-sm text-gray-500">{selectedTemplate.product_class}</p>
+              <h3 className="text-lg font-semibold">{selectedTemplate.product_class} - {selectedTemplate.line_name} - {selectedTemplate.code}</h3>
+              <p className="text-sm text-gray-500">Configurador de producto</p>
             </div>
             <button
               onClick={() => setSelectedTemplate(null)}
@@ -258,36 +258,12 @@ const TemplateSelector: React.FC<Props> = ({ onAddItem, onCancel }) => {
                     <span className="text-sm">Incluir {attribute.name}</span>
                   </label>
                 ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
-                    {attribute.options?.map((option) => (
-                      <label
-                        key={option.id}
-                        className={`flex items-center p-3 border rounded cursor-pointer transition-colors ${
-                          selections[attribute.code] === option.code
-                            ? 'border-blue-500 bg-blue-50'
-                            : 'border-gray-200 hover:border-gray-300'
-                        }`}
-                      >
-                        <input
-                          type="radio"
-                          name={attribute.code}
-                          value={option.code}
-                          checked={selections[attribute.code] === option.code}
-                          onChange={(e) => handleSelectionChange(attribute.code, e.target.value)}
-                          className="mr-2"
-                        />
-                        <div className="flex-1">
-                          <div className="font-medium text-sm">{option.label}</div>
-                          <div className="text-xs text-gray-500">
-                            {option.pricing_mode === 'ABS' && `+$${parseFloat(option.price_value).toLocaleString()}`}
-                            {option.pricing_mode === 'FACTOR' && `×${option.price_value}`}
-                            {option.pricing_mode === 'PER_M2' && `$${parseFloat(option.price_value).toLocaleString()}/m²`}
-                            {option.pricing_mode === 'PERIMETER' && `$${parseFloat(option.price_value).toLocaleString()}/ml`}
-                          </div>
-                        </div>
-                      </label>
-                    ))}
-                  </div>
+                  <DynamicAttributeSelector
+                    attribute={attribute}
+                    selectedValue={selections[attribute.code]}
+                    onSelectionChange={handleSelectionChange}
+                    allSelections={selections}
+                  />
                 )}
               </div>
             ))}
@@ -326,6 +302,125 @@ const TemplateSelector: React.FC<Props> = ({ onAddItem, onCancel }) => {
           </button>
         )}
       </div>
+    </div>
+  );
+};
+
+// Componente para manejar atributos dinámicos
+const DynamicAttributeSelector: React.FC<{
+  attribute: Attribute;
+  selectedValue: any;
+  onSelectionChange: (code: string, value: any) => void;
+  allSelections: Record<string, any>;
+}> = ({ attribute, selectedValue, onSelectionChange, allSelections }) => {
+  const [options, setOptions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadDynamicOptions();
+  }, [attribute.code, allSelections]);
+
+  const loadDynamicOptions = async () => {
+    setLoading(true);
+    try {
+      let url = '';
+      
+      switch(attribute.code) {
+        case 'linea':
+          url = '/catalog/api/lineas/';
+          break;
+        case 'marco':
+          if (allSelections.linea) {
+            url = `/catalog/api/marcos/?linea=${allSelections.linea}`;
+          }
+          break;
+        case 'hoja':
+          if (allSelections.marco) {
+            url = `/catalog/api/hojas/?marco_id=${allSelections.marco}`;
+          }
+          break;
+        case 'interior':
+          if (allSelections.hoja) {
+            url = `/catalog/api/interiores/?hoja_id=${allSelections.hoja}`;
+          }
+          break;
+        default:
+          // Usar opciones estáticas si no es dinámico
+          setOptions(attribute.options || []);
+          setLoading(false);
+          return;
+      }
+
+      if (url) {
+        const response = await fetch(url);
+        if (response.ok) {
+          const data = await response.json();
+          const optionsKey = Object.keys(data)[0]; // lineas, marcos, hojas, interiores
+          setOptions(data[optionsKey] || []);
+        }
+      } else {
+        setOptions([]);
+      }
+    } catch (error) {
+      console.error('Error loading dynamic options:', error);
+      setOptions([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-4">
+        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+        <span className="ml-2 text-sm text-gray-500">Cargando opciones...</span>
+      </div>
+    );
+  }
+
+  if (options.length === 0) {
+    return (
+      <div className="text-sm text-gray-500 p-4">
+        {attribute.code === 'marco' && !allSelections.linea && 'Selecciona una línea primero'}
+        {attribute.code === 'hoja' && !allSelections.marco && 'Selecciona un marco primero'}
+        {attribute.code === 'interior' && !allSelections.hoja && 'Selecciona una hoja primero'}
+        {!['marco', 'hoja', 'interior'].includes(attribute.code) && 'No hay opciones disponibles'}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-2">
+      {options.map((option, index) => (
+        <label
+          key={option.code || index}
+          className={`flex items-center p-3 border rounded cursor-pointer transition-colors ${
+            selectedValue === option.code
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-gray-200 hover:border-gray-300'
+          }`}
+        >
+          <input
+            type="radio"
+            name={attribute.code}
+            value={option.code}
+            checked={selectedValue === option.code}
+            onChange={(e) => onSelectionChange(attribute.code, e.target.value)}
+            className="mr-2"
+          />
+          <div className="flex-1">
+            <div className="font-medium text-sm">{option.label}</div>
+            {option.price_value && (
+              <div className="text-xs text-gray-500">
+                {option.pricing_mode === 'ABS' && `+$${parseFloat(option.price_value).toLocaleString()}`}
+                {option.pricing_mode === 'FACTOR' && `×${option.price_value}`}
+                {option.pricing_mode === 'PER_M2' && `$${parseFloat(option.price_value).toLocaleString()}/m²`}
+                {option.pricing_mode === 'PERIMETER' && `$${parseFloat(option.price_value).toLocaleString()}/ml`}
+              </div>
+            )}
+          </div>
+        </label>
+      ))}
     </div>
   );
 };

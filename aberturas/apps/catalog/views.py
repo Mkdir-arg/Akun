@@ -77,3 +77,67 @@ def calculate_price(request):
         
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
+@require_http_methods(["GET"])
+def get_associated_products(request, template_id):
+    """API para obtener productos específicamente asociados a una plantilla"""
+    try:
+        from .models import ProductTemplate
+        
+        # Obtener la plantilla principal
+        main_template = ProductTemplate.objects.get(id=template_id)
+        
+        # Lógica de productos asociados basada en reglas de negocio
+        associated = []
+        
+        # 1. Accesorios de la misma línea
+        accessories = ProductTemplate.objects.filter(
+            line_name=main_template.line_name,
+            product_class='ACCESORIO',
+            is_active=True
+        ).exclude(id=template_id)
+        
+        for acc in accessories:
+            associated.append({
+                'id': acc.id,
+                'product_class': acc.product_class,
+                'line_name': acc.line_name,
+                'code': acc.code,
+                'base_price_net': float(acc.base_price_net),
+                'currency': acc.currency,
+                'relationship_type': 'ACCESORIO_LINEA'
+            })
+        
+        # 2. Productos complementarios (ej: mosquiteros para ventanas)
+        if main_template.product_class == 'VENTANA':
+            mosquiteros = ProductTemplate.objects.filter(
+                line_name=main_template.line_name,
+                code__icontains='MOSQUITERO',
+                is_active=True
+            ).exclude(id=template_id)
+            
+            for mosq in mosquiteros:
+                associated.append({
+                    'id': mosq.id,
+                    'product_class': mosq.product_class,
+                    'line_name': mosq.line_name,
+                    'code': mosq.code,
+                    'base_price_net': float(mosq.base_price_net),
+                    'currency': mosq.currency,
+                    'relationship_type': 'COMPLEMENTARIO'
+                })
+        
+        return JsonResponse({
+            'main_product': {
+                'id': main_template.id,
+                'product_class': main_template.product_class,
+                'line_name': main_template.line_name,
+                'code': main_template.code
+            },
+            'associated_products': associated
+        })
+        
+    except ProductTemplate.DoesNotExist:
+        return JsonResponse({'error': 'Plantilla no encontrada'}, status=404)
+    except Exception as e:
+        return JsonResponse({'error': str(e)}, status=500)
