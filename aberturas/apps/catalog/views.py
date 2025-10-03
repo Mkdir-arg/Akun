@@ -5,20 +5,38 @@ from .services.template_filter_service import TemplateFilterService
 import json
 
 @require_http_methods(["GET"])
+def get_template_categories(request):
+    """Lista de categorias dinamicas basadas en extrusoras"""
+    categories = TemplateFilterService.get_categories()
+    return JsonResponse({"categories": categories})
+
+
+@require_http_methods(["GET"])
 def get_lineas(request):
-    """API para obtener líneas disponibles"""
-    lineas = TemplateFilterService.get_lineas()
-    return JsonResponse({'lineas': lineas})
+    """API para obtener lineas disponibles"""
+    category_id = request.GET.get("category_id")
+    extrusora_id = request.GET.get("extrusora_id")
+    try:
+        category_id_int = int(category_id) if category_id is not None else None
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "category_id invalido"}, status=400)
+    try:
+        extrusora_id_int = int(extrusora_id) if extrusora_id is not None else None
+    except (TypeError, ValueError):
+        return JsonResponse({"error": "extrusora_id invalido"}, status=400)
+    lineas = TemplateFilterService.get_lineas(category_id=category_id_int, extrusora_id=extrusora_id_int)
+    return JsonResponse({"lineas": lineas})
 
 @require_http_methods(["GET"])
 def get_marcos(request):
-    """API para obtener marcos por línea"""
-    linea = request.GET.get('linea')
+    """API para obtener marcos por linea"""
+    linea = request.GET.get("linea")
     if not linea:
-        return JsonResponse({'error': 'Línea requerida'}, status=400)
-    
+        return JsonResponse({"error": "Linea requerida"}, status=400)
+
     marcos = TemplateFilterService.get_marcos(linea)
-    return JsonResponse({'marcos': marcos})
+    return JsonResponse({"marcos": marcos})
+
 
 @require_http_methods(["GET"])
 def get_hojas(request):
@@ -69,7 +87,7 @@ def calculate_price(request):
         if not template_id:
             return JsonResponse({'error': 'Template ID requerido'}, status=400)
         
-        # Usar el método existente de AttributeOption
+        # Usar el mÃƒÂ©todo existente de AttributeOption
         from .models import AttributeOption
         result = AttributeOption.calculate_pricing(template_id, selections)
         
@@ -80,17 +98,17 @@ def calculate_price(request):
 
 @require_http_methods(["GET"])
 def get_associated_products(request, template_id):
-    """API para obtener productos específicamente asociados a una plantilla"""
+    """API para obtener productos especÃƒÂ­ficamente asociados a una plantilla"""
     try:
         from .models import ProductTemplate
         
         # Obtener la plantilla principal
         main_template = ProductTemplate.objects.get(id=template_id)
         
-        # Lógica de productos asociados basada en reglas de negocio
+        # LÃƒÂ³gica de productos asociados basada en reglas de negocio
         associated = []
         
-        # 1. Accesorios de la misma línea
+        # 1. Accesorios de la misma lÃƒÂ­nea
         accessories = ProductTemplate.objects.filter(
             line_name=main_template.line_name,
             product_class='ACCESORIO',

@@ -1,3 +1,4 @@
+from django.db import models
 from django.shortcuts import render, get_object_or_404, redirect
 from django.http import JsonResponse
 from django.views.decorators.http import require_http_methods
@@ -54,7 +55,7 @@ def presupuesto_create(request):
 
 @login_required
 def presupuesto_add_item(request, pk):
-    """Agregar ítem basado en plantilla al presupuesto"""
+    """Agregar ÃƒÆ’Ã‚Â­tem basado en plantilla al presupuesto"""
     presupuesto = get_object_or_404(Presupuesto, pk=pk)
     
     if request.method == 'POST':
@@ -70,11 +71,11 @@ def presupuesto_add_item(request, pk):
             template = ProductTemplate.objects.get(pk=template_id)
             config = json.loads(template_config)
             
-            # Obtener el siguiente número de línea
+            # Obtener el siguiente nÃƒÆ’Ã‚Âºmero de lÃƒÆ’Ã‚Â­nea
             last_line = presupuesto.items.order_by('-line_number').first()
             line_number = (last_line.line_number + 1) if last_line else 1
             
-            # Crear línea de presupuesto
+            # Crear lÃƒÆ’Ã‚Â­nea de presupuesto
             LineaPresupuesto.objects.create(
                 quote=presupuesto,
                 template=template,
@@ -83,7 +84,7 @@ def presupuesto_add_item(request, pk):
                 line_number=line_number
             )
             
-            messages.success(request, 'Ítem agregado al presupuesto')
+            messages.success(request, 'ÃƒÆ’Ã‚Âtem agregado al presupuesto')
             return redirect('sales:presupuesto_detail', pk=pk)
             
         except (ProductTemplate.DoesNotExist, json.JSONDecodeError) as e:
@@ -98,7 +99,7 @@ def presupuesto_add_item(request, pk):
 @csrf_exempt
 @require_http_methods(["POST"])
 def add_template_item(request):
-    """API para agregar ítem basado en plantilla"""
+    """API para agregar ÃƒÆ’Ã‚Â­tem basado en plantilla"""
     try:
         data = json.loads(request.body)
         
@@ -113,11 +114,11 @@ def add_template_item(request):
         presupuesto = get_object_or_404(Presupuesto, pk=presupuesto_id)
         template = get_object_or_404(ProductTemplate, pk=template_id)
         
-        # Obtener el siguiente número de línea
+        # Obtener el siguiente nÃƒÆ’Ã‚Âºmero de lÃƒÆ’Ã‚Â­nea
         last_line = presupuesto.items.order_by('-line_number').first()
         line_number = (last_line.line_number + 1) if last_line else 1
         
-        # Crear línea de presupuesto
+        # Crear lÃƒÆ’Ã‚Â­nea de presupuesto
         linea = LineaPresupuesto.objects.create(
             quote=presupuesto,
             template=template,
@@ -139,16 +140,46 @@ def add_template_item(request):
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-@require_http_methods(["GET"])
+@require_http_methods(['GET'])
 def get_templates(request):
     """API para obtener plantillas disponibles"""
     product_class = request.GET.get('product_class')
-    
-    templates = ProductTemplate.objects.filter(is_active=True)
-    
+    active = request.GET.get('active')
+    category_id = request.GET.get('category_id')
+    extrusora_id = request.GET.get('extrusora_id')
+    line_name = request.GET.get('line_name')
+
+    templates = ProductTemplate.objects.all().select_related('category')
+
     if product_class:
         templates = templates.filter(product_class=product_class)
-    
+
+    if active is not None:
+        active_lower = active.lower()
+        if active_lower in ('true', 'false'):
+            templates = templates.filter(is_active=(active_lower == 'true'))
+        elif active_lower != '':
+            return JsonResponse({'error': 'Parametro active invalido'}, status=400)
+
+    if category_id:
+        try:
+            category_id_int = int(category_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'category_id invalido'}, status=400)
+        templates = templates.filter(category_id=category_id_int)
+
+    if extrusora_id:
+        try:
+            extrusora_id_int = int(extrusora_id)
+        except (TypeError, ValueError):
+            return JsonResponse({'error': 'extrusora_id invalido'}, status=400)
+        templates = templates.filter(legacy_extrusora_id=extrusora_id_int)
+
+    if line_name:
+        templates = templates.filter(line_name__icontains=line_name)
+
+    templates = templates.annotate(attributes_count=models.Count('attributes')).order_by('line_name', 'product_class', 'code')
+
     templates_data = []
     for template in templates:
         templates_data.append({
@@ -156,15 +187,21 @@ def get_templates(request):
             'code': template.code,
             'line_name': template.line_name,
             'product_class': template.product_class,
+            'version': template.version,
+            'is_active': template.is_active,
+            'created_at': template.created_at.isoformat() if template.created_at else None,
+            'base_price_net': float(template.base_price_net),
             'requires_dimensions': template.requires_dimensions,
-            'base_price_net': float(template.base_price_net)
+            'attributes_count': getattr(template, 'attributes_count', 0),
+            'category_id': template.category_id,
+            'legacy_extrusora_id': template.legacy_extrusora_id,
         })
-    
+
     return JsonResponse({'templates': templates_data})
 
 @require_http_methods(["GET"])
 def get_template_detail(request, template_id):
-    """API para obtener detalle de una plantilla específica"""
+    """API para obtener detalle de una plantilla especÃƒÆ’Ã‚Â­fica"""
     try:
         template = get_object_or_404(ProductTemplate, pk=template_id)
         
@@ -214,7 +251,7 @@ def get_template_detail(request, template_id):
 @csrf_exempt
 @require_http_methods(["POST"])
 def calculate_template_price(request):
-    """API para calcular precio de plantilla con configuración específica"""
+    """API para calcular precio de plantilla con configuraciÃƒÆ’Ã‚Â³n especÃƒÆ’Ã‚Â­fica"""
     try:
         data = json.loads(request.body)
         
@@ -227,7 +264,7 @@ def calculate_template_price(request):
         
         template = get_object_or_404(ProductTemplate, pk=template_id)
         
-        # Calcular precio usando el método de AttributeOption
+        # Calcular precio usando el mÃƒÆ’Ã‚Â©todo de AttributeOption
         from apps.catalog.models import AttributeOption
         pricing = AttributeOption.calculate_pricing(template_id, template_config)
         

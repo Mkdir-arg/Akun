@@ -43,6 +43,7 @@ LOCAL_APPS = [
     'apps.accounts',
     'apps.ui',
     'apps.crm',
+    'apps.legacy',
     'apps.catalog',
     'apps.sales',
 ]
@@ -166,7 +167,7 @@ LOGGING = {
     'disable_existing_loggers': False,
     'formatters': {
         'transaction': {
-            'format': '⏰ {asctime} | {message}',
+            'format': 'â° {asctime} | {message}',
             'style': '{',
             'datefmt': '%H:%M:%S',
         },
@@ -201,7 +202,7 @@ LOGGING = {
 
 # REST Framework
 REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [],  # Sin autenticación para desarrollo
+    'DEFAULT_AUTHENTICATION_CLASSES': [],  # Sin autenticaciÃ³n para desarrollo
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.AllowAny',  # Temporalmente para debug
     ],
@@ -216,24 +217,24 @@ REST_FRAMEWORK = {
     # }
 }
 
-# CORS settings - Configurar para producción
+# CORS settings - Configurar para producciÃ³n
 CORS_ALLOWED_ORIGINS = [
     "https://tu-dominio.com",  # Cambiar por dominio real
     "http://localhost:3001",  # Solo para desarrollo
 ]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # NUNCA True en producción
+CORS_ALLOW_ALL_ORIGINS = False  # NUNCA True en producciÃ³n
 
 # Configuraciones de seguridad
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
-SECURE_HSTS_SECONDS = 31536000  # 1 año
+SECURE_HSTS_SECONDS = 31536000  # 1 aÃ±o
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
 X_FRAME_OPTIONS = 'DENY'
 SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
 
-# Configuración de sesiones seguras
+# ConfiguraciÃ³n de sesiones seguras
 SESSION_COOKIE_SECURE = True  # Solo HTTPS
 SESSION_COOKIE_HTTPONLY = True
 SESSION_COOKIE_SAMESITE = 'Strict'
@@ -244,7 +245,7 @@ CSRF_COOKIE_SECURE = True
 CSRF_COOKIE_HTTPONLY = True
 CSRF_COOKIE_SAMESITE = 'Strict'
 
-# Validación de contraseñas
+# ValidaciÃ³n de contraseÃ±as
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
